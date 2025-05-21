@@ -3,6 +3,6 @@
 set -e
 set -x
 
-mypy app
-ruff check app
-ruff format app --check
+mypy src/app
+ruff check src/app
+ruff format src/app --check

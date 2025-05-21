@@ -1,4 +1,7 @@
-FROM python:3.10
+FROM python:3.12-alpine3.20
+
+# Install bash
+RUN apk add --no-cache bash
 
 ENV PYTHONUNBUFFERED=1
 
@@ -27,17 +30,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project
 
-ENV PYTHONPATH=/app
-
 COPY ./scripts /app/scripts
 
 COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
+COPY ./src /app/src
 
-COPY ./app /app/app
-
-# Sync the project
-# Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
+# Install the project itself as an editable package
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync
+    uv pip install -e ./src
 
-CMD ["fastapi", "run", "--workers", "4", "app/main.py"]
+# Change WORKDIR to the source directory where the 'app' package resides
+WORKDIR /app/src
+
+CMD ["fastapi", "run", "--workers", "4", "app.main:app"]
