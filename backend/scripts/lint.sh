@@ -3,6 +3,6 @@
 set -e
 set -x
 
-mypy src/app
+pyre
 ruff check src/app
 ruff format src/app --check
