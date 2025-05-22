@@ -1,0 +1,750 @@
+2025-05-22 02:48:01,941 [PID 2325] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-22 02:48:01,941 [PID 2325] INFO Pyre binary is located at `/home/swebot/.local/bin/pyre.bin`
+2025-05-22 02:48:01,943 [PID 2325] INFO Could not determine the number of Pyre workers from configuration. Auto-set the value to 3.
+2025-05-22 02:48:01,943 [PID 2325] INFO No typeshed specified, looking for it...
+2025-05-22 02:48:01,943 [PID 2325] DEBUG Could not find bundled typeshed. Try importing typeshed directly...
+2025-05-22 02:48:01,943 [PID 2325] ERROR `import typeshed` failed.
+2025-05-22 02:48:01,943 [PID 2325] WARNING Could not find a suitable typeshed. Types for Python builtins and standard libraries may be missing!
+2025-05-22 02:48:01,944 [PID 2325] INFO Writing arguments into /tmp/pyre_arguments_q_2zrq3_.json...
+2025-05-22 02:48:01,944 [PID 2325] DEBUG Arguments:
+{
+  "source_paths": {
+    "kind": "simple",
+    "paths": [
+      "/app/backend/src/app"
+    ]
+  },
+  "search_paths": [],
+  "excludes": [
+    "alembic",
+    "**/__pycache__",
+    "**/.direnv",
+    "**/.eggs",
+    "**/.git",
+    "**/.hg",
+    "**/.mypy_cache",
+    "**/.nox",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.svn",
+    "**/.tox",
+    "**/.venv",
+    "**/venv"
+  ],
+  "checked_directory_allowlist": [
+    "/app/backend/src/app"
+  ],
+  "checked_directory_blocklist": [],
+  "extensions": [],
+  "log_path": "/app/backend/.pyre",
+  "global_root": "/app/backend",
+  "debug": false,
+  "python_version": {
+    "major": 3,
+    "minor": 10,
+    "micro": 0
+  },
+  "system_platform": "linux",
+  "shared_memory": {},
+  "parallel": true,
+  "number_of_workers": 3,
+  "additional_logging_sections": [],
+  "show_error_traces": false,
+  "strict": false
+}
+2025-05-22 02:48:01,987 [PID 2325] INFO  Initializing shared memory (heap_size: 8589934592, dep_table_pow: 1, hash_table_pow: 26)
+2025-05-22 02:48:01,987 [PID 2325] INFO  Building module tracker...
+2025-05-22 02:48:01,988 [PID 2325] PERFORMANCE  Module tracker built: 0.002s
+2025-05-22 02:48:01,988 [PID 2325] PERFORMANCE  Full environment built: 0.002s
+2025-05-22 02:48:01,988 [PID 2325] INFO  Collecting all definitions...
+2025-05-22 02:48:02,102 [PID 2325] PERFORMANCE  Collected definitions (defines: 198): 0.116s
+2025-05-22 02:48:02,103 [PID 2325] INFO  Checking 198 functions...
+2025-05-22 02:48:02,215 [PID 2325] INFO  Processed 34 of 198 functions
+2025-05-22 02:48:02,216 [PID 2325] INFO  Processed 68 of 198 functions
+2025-05-22 02:48:02,318 [PID 2325] INFO  Processed 102 of 198 functions
+2025-05-22 02:48:02,318 [PID 2325] INFO  Processed 136 of 198 functions
+2025-05-22 02:48:02,349 [PID 2325] INFO  Processed 170 of 198 functions
+2025-05-22 02:48:02,410 [PID 2325] INFO  Processed 198 of 198 functions
+2025-05-22 02:48:02,410 [PID 2325] PERFORMANCE  Check_TypeCheck: 0.301s
+2025-05-22 02:48:02,411 [PID 2325] MEMORY  Shared memory size post-typecheck (size: 0)
+2025-05-22 02:48:02,411 [PID 2325] INFO  Postprocessing 41 sources...
+2025-05-22 02:48:02,452 [PID 2325] INFO  Postprocessed 13 of 41 sources
+2025-05-22 02:48:02,462 [PID 2325] INFO  Postprocessed 27 of 41 sources
+2025-05-22 02:48:02,462 [PID 2325] INFO  Postprocessed 41 of 41 sources
+2025-05-22 02:48:02,463 [PID 2325] PERFORMANCE  Check_Postprocessing: 0.054s
+2025-05-22 02:48:02,463 [PID 2325] PERFORMANCE  Check (request kind: FullCheck): 0.475s
+2025-05-22 02:48:02,537 [PID 2325] ERROR Found 403 type errors!
+2025-05-22 02:48:36,530 [PID 2562] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-22 02:48:36,530 [PID 2562] INFO Pyre binary is located at `/app/backend/.venv/bin/pyre.bin`
+2025-05-22 02:48:36,531 [PID 2562] INFO Could not determine the number of Pyre workers from configuration. Auto-set the value to 3.
+2025-05-22 02:48:36,531 [PID 2562] INFO No typeshed specified, looking for it...
+2025-05-22 02:48:36,532 [PID 2562] INFO Found: `/app/backend/.venv/lib/pyre_check/typeshed`
+2025-05-22 02:48:36,533 [PID 2562] INFO Writing arguments into /tmp/pyre_arguments_nkfoi75m.json...
+2025-05-22 02:48:36,533 [PID 2562] DEBUG Arguments:
+{
+  "source_paths": {
+    "kind": "simple",
+    "paths": [
+      "/app/backend/src/app"
+    ]
+  },
+  "search_paths": [
+    "/app/backend/.venv/lib/pyre_check/typeshed/stdlib",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ExifRead",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyMySQL",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyYAML",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/aiofiles",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/boto",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/chevron",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/colorama",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ldap3",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/mysqlclient",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/paramiko",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/psycopg2",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pycurl",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/python-dateutil",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pytz",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/regex",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/requests",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/retry",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/tqdm",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ujson"
+  ],
+  "excludes": [
+    "alembic",
+    "**/__pycache__",
+    "**/.direnv",
+    "**/.eggs",
+    "**/.git",
+    "**/.hg",
+    "**/.mypy_cache",
+    "**/.nox",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.svn",
+    "**/.tox",
+    "**/.venv",
+    "**/venv"
+  ],
+  "checked_directory_allowlist": [
+    "/app/backend/src/app"
+  ],
+  "checked_directory_blocklist": [],
+  "extensions": [],
+  "log_path": "/app/backend/.pyre",
+  "global_root": "/app/backend",
+  "debug": false,
+  "python_version": {
+    "major": 3,
+    "minor": 10,
+    "micro": 0
+  },
+  "system_platform": "linux",
+  "shared_memory": {},
+  "parallel": true,
+  "number_of_workers": 3,
+  "additional_logging_sections": [],
+  "show_error_traces": false,
+  "strict": false
+}
+2025-05-22 02:48:36,617 [PID 2562] INFO  Initializing shared memory (heap_size: 8589934592, dep_table_pow: 1, hash_table_pow: 26)
+2025-05-22 02:48:36,617 [PID 2562] INFO  Building module tracker...
+2025-05-22 02:48:36,843 [PID 2562] PERFORMANCE  Module tracker built: 0.222s
+2025-05-22 02:48:36,843 [PID 2562] PERFORMANCE  Full environment built: 0.222s
+2025-05-22 02:48:36,844 [PID 2562] INFO  Collecting all definitions...
+2025-05-22 02:48:37,123 [PID 2562] PERFORMANCE  Collected definitions (defines: 197): 0.281s
+2025-05-22 02:48:37,123 [PID 2562] INFO  Checking 197 functions...
+2025-05-22 02:48:37,880 [PID 2562] INFO  Processed 33 of 197 functions
+2025-05-22 02:48:38,014 [PID 2562] INFO  Processed 66 of 197 functions
+2025-05-22 02:48:38,055 [PID 2562] INFO  Processed 99 of 197 functions
+2025-05-22 02:48:38,127 [PID 2562] INFO  Processed 132 of 197 functions
+2025-05-22 02:48:38,138 [PID 2562] INFO  Processed 165 of 197 functions
+2025-05-22 02:48:38,189 [PID 2562] INFO  Processed 197 of 197 functions
+2025-05-22 02:48:38,189 [PID 2562] PERFORMANCE  Check_TypeCheck: 1.061s
+2025-05-22 02:48:38,189 [PID 2562] MEMORY  Shared memory size post-typecheck (size: 1)
+2025-05-22 02:48:38,189 [PID 2562] INFO  Postprocessing 40 sources...
+2025-05-22 02:48:38,230 [PID 2562] INFO  Postprocessed 14 of 40 sources
+2025-05-22 02:48:38,230 [PID 2562] INFO  Postprocessed 28 of 40 sources
+2025-05-22 02:48:38,230 [PID 2562] INFO  Postprocessed 40 of 40 sources
+2025-05-22 02:48:38,230 [PID 2562] PERFORMANCE  Check_Postprocessing: 0.050s
+2025-05-22 02:48:38,231 [PID 2562] PERFORMANCE  Check (request kind: FullCheck): 1.618s
+2025-05-22 02:48:38,263 [PID 2562] ERROR Found 307 type errors!
+2025-05-22 02:48:48,582 [PID 2666] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-22 02:48:48,582 [PID 2666] INFO Pyre binary is located at `/app/backend/.venv/bin/pyre.bin`
+2025-05-22 02:48:48,583 [PID 2666] INFO Could not determine the number of Pyre workers from configuration. Auto-set the value to 3.
+2025-05-22 02:48:48,583 [PID 2666] INFO No typeshed specified, looking for it...
+2025-05-22 02:48:48,583 [PID 2666] INFO Found: `/app/backend/.venv/lib/pyre_check/typeshed`
+2025-05-22 02:48:48,584 [PID 2666] INFO Writing arguments into /tmp/pyre_arguments_wn4tnfws.json...
+2025-05-22 02:48:48,584 [PID 2666] DEBUG Arguments:
+{
+  "source_paths": {
+    "kind": "simple",
+    "paths": [
+      "/app/backend/src/app"
+    ]
+  },
+  "search_paths": [
+    "/app/backend/.venv/lib/pyre_check/typeshed/stdlib",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ExifRead",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyMySQL",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyYAML",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/aiofiles",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/boto",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/chevron",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/colorama",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ldap3",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/mysqlclient",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/paramiko",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/psycopg2",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pycurl",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/python-dateutil",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pytz",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/regex",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/requests",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/retry",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/tqdm",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ujson"
+  ],
+  "excludes": [
+    "alembic",
+    "**/__pycache__",
+    "**/.direnv",
+    "**/.eggs",
+    "**/.git",
+    "**/.hg",
+    "**/.mypy_cache",
+    "**/.nox",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.svn",
+    "**/.tox",
+    "**/.venv",
+    "**/venv"
+  ],
+  "checked_directory_allowlist": [
+    "/app/backend/src/app"
+  ],
+  "checked_directory_blocklist": [],
+  "extensions": [],
+  "log_path": "/app/backend/.pyre",
+  "global_root": "/app/backend",
+  "debug": false,
+  "python_version": {
+    "major": 3,
+    "minor": 10,
+    "micro": 0
+  },
+  "system_platform": "linux",
+  "shared_memory": {},
+  "parallel": true,
+  "number_of_workers": 3,
+  "additional_logging_sections": [],
+  "show_error_traces": false,
+  "strict": false
+}
+2025-05-22 02:48:48,617 [PID 2666] INFO  Initializing shared memory (heap_size: 8589934592, dep_table_pow: 1, hash_table_pow: 26)
+2025-05-22 02:48:48,627 [PID 2666] INFO  Building module tracker...
+2025-05-22 02:48:48,668 [PID 2666] PERFORMANCE  Module tracker built: 0.048s
+2025-05-22 02:48:48,669 [PID 2666] PERFORMANCE  Full environment built: 0.049s
+2025-05-22 02:48:48,669 [PID 2666] INFO  Collecting all definitions...
+2025-05-22 02:48:48,802 [PID 2666] PERFORMANCE  Collected definitions (defines: 197): 0.127s
+2025-05-22 02:48:48,802 [PID 2666] INFO  Checking 197 functions...
+2025-05-22 02:48:49,149 [PID 2666] INFO  Processed 33 of 197 functions
+2025-05-22 02:48:49,170 [PID 2666] INFO  Processed 66 of 197 functions
+2025-05-22 02:48:49,211 [PID 2666] INFO  Processed 99 of 197 functions
+2025-05-22 02:48:49,242 [PID 2666] INFO  Processed 132 of 197 functions
+2025-05-22 02:48:49,263 [PID 2666] INFO  Processed 165 of 197 functions
+2025-05-22 02:48:49,324 [PID 2666] INFO  Processed 197 of 197 functions
+2025-05-22 02:48:49,325 [PID 2666] PERFORMANCE  Check_TypeCheck: 0.522s
+2025-05-22 02:48:49,325 [PID 2666] MEMORY  Shared memory size post-typecheck (size: 1)
+2025-05-22 02:48:49,325 [PID 2666] INFO  Postprocessing 40 sources...
+2025-05-22 02:48:49,366 [PID 2666] INFO  Postprocessed 14 of 40 sources
+2025-05-22 02:48:49,376 [PID 2666] INFO  Postprocessed 26 of 40 sources
+2025-05-22 02:48:49,377 [PID 2666] INFO  Postprocessed 40 of 40 sources
+2025-05-22 02:48:49,377 [PID 2666] PERFORMANCE  Check_Postprocessing: 0.053s
+2025-05-22 02:48:49,377 [PID 2666] PERFORMANCE  Check (request kind: FullCheck): 0.753s
+2025-05-22 02:48:49,408 [PID 2666] ERROR Found 307 type errors!
+2025-05-22 02:50:22,199 [PID 3193] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-22 02:50:22,199 [PID 3193] INFO Pyre binary is located at `/app/backend/.venv/bin/pyre.bin`
+2025-05-22 02:50:22,200 [PID 3193] INFO Could not determine the number of Pyre workers from configuration. Auto-set the value to 3.
+2025-05-22 02:50:22,200 [PID 3193] INFO No typeshed specified, looking for it...
+2025-05-22 02:50:22,200 [PID 3193] INFO Found: `/app/backend/.venv/lib/pyre_check/typeshed`
+2025-05-22 02:50:22,201 [PID 3193] INFO Writing arguments into /tmp/pyre_arguments_uqed8_pf.json...
+2025-05-22 02:50:22,202 [PID 3193] DEBUG Arguments:
+{
+  "source_paths": {
+    "kind": "simple",
+    "paths": [
+      "/app/backend/src/app"
+    ]
+  },
+  "search_paths": [
+    "/app/backend/.venv/lib/pyre_check/typeshed/stdlib",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ExifRead",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyMySQL",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyYAML",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/aiofiles",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/boto",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/chevron",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/colorama",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ldap3",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/mysqlclient",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/paramiko",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/psycopg2",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pycurl",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/python-dateutil",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pytz",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/regex",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/requests",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/retry",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/tqdm",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ujson"
+  ],
+  "excludes": [
+    "alembic",
+    "**/__pycache__",
+    "**/.direnv",
+    "**/.eggs",
+    "**/.git",
+    "**/.hg",
+    "**/.mypy_cache",
+    "**/.nox",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.svn",
+    "**/.tox",
+    "**/.venv",
+    "**/venv"
+  ],
+  "checked_directory_allowlist": [
+    "/app/backend/src/app"
+  ],
+  "checked_directory_blocklist": [],
+  "extensions": [],
+  "log_path": "/app/backend/.pyre",
+  "global_root": "/app/backend",
+  "debug": false,
+  "python_version": {
+    "major": 3,
+    "minor": 10,
+    "micro": 0
+  },
+  "system_platform": "linux",
+  "shared_memory": {},
+  "parallel": true,
+  "number_of_workers": 3,
+  "additional_logging_sections": [],
+  "show_error_traces": false,
+  "strict": false
+}
+2025-05-22 02:50:22,234 [PID 3193] INFO  Initializing shared memory (heap_size: 8589934592, dep_table_pow: 1, hash_table_pow: 26)
+2025-05-22 02:50:22,244 [PID 3193] INFO  Building module tracker...
+2025-05-22 02:50:22,296 [PID 3193] PERFORMANCE  Module tracker built: 0.051s
+2025-05-22 02:50:22,296 [PID 3193] PERFORMANCE  Full environment built: 0.052s
+2025-05-22 02:50:22,296 [PID 3193] INFO  Collecting all definitions...
+2025-05-22 02:50:22,408 [PID 3193] PERFORMANCE  Collected definitions (defines: 197): 0.110s
+2025-05-22 02:50:22,408 [PID 3193] INFO  Checking 197 functions...
+2025-05-22 02:50:22,746 [PID 3193] INFO  Processed 33 of 197 functions
+2025-05-22 02:50:22,767 [PID 3193] INFO  Processed 66 of 197 functions
+2025-05-22 02:50:22,880 [PID 3193] INFO  Processed 99 of 197 functions
+2025-05-22 02:50:22,890 [PID 3193] INFO  Processed 132 of 197 functions
+2025-05-22 02:50:22,901 [PID 3193] INFO  Processed 165 of 197 functions
+2025-05-22 02:50:22,993 [PID 3193] INFO  Processed 197 of 197 functions
+2025-05-22 02:50:22,993 [PID 3193] PERFORMANCE  Check_TypeCheck: 0.590s
+2025-05-22 02:50:22,993 [PID 3193] MEMORY  Shared memory size post-typecheck (size: 1)
+2025-05-22 02:50:22,994 [PID 3193] INFO  Postprocessing 40 sources...
+2025-05-22 02:50:23,045 [PID 3193] INFO  Postprocessed 14 of 40 sources
+2025-05-22 02:50:23,045 [PID 3193] INFO  Postprocessed 28 of 40 sources
+2025-05-22 02:50:23,046 [PID 3193] INFO  Postprocessed 40 of 40 sources
+2025-05-22 02:50:23,046 [PID 3193] PERFORMANCE  Check_Postprocessing: 0.050s
+2025-05-22 02:50:23,046 [PID 3193] PERFORMANCE  Check (request kind: FullCheck): 0.804s
+2025-05-22 02:50:23,075 [PID 3193] ERROR Found 307 type errors!
+2025-05-22 02:50:47,364 [PID 3297] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-22 02:50:47,365 [PID 3297] INFO Pyre binary is located at `/app/backend/.venv/bin/pyre.bin`
+2025-05-22 02:50:47,366 [PID 3297] INFO Could not determine the number of Pyre workers from configuration. Auto-set the value to 3.
+2025-05-22 02:50:47,366 [PID 3297] INFO No typeshed specified, looking for it...
+2025-05-22 02:50:47,366 [PID 3297] INFO Found: `/app/backend/.venv/lib/pyre_check/typeshed`
+2025-05-22 02:50:47,368 [PID 3297] INFO Writing arguments into /tmp/pyre_arguments_cs8gf737.json...
+2025-05-22 02:50:47,368 [PID 3297] DEBUG Arguments:
+{
+  "source_paths": {
+    "kind": "simple",
+    "paths": [
+      "/app/backend/src/app"
+    ]
+  },
+  "search_paths": [
+    "/app/backend/.venv/lib/pyre_check/typeshed/stdlib",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ExifRead",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyMySQL",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyYAML",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/aiofiles",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/boto",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/chevron",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/colorama",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ldap3",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/mysqlclient",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/paramiko",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/psycopg2",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pycurl",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/python-dateutil",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pytz",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/regex",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/requests",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/retry",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/tqdm",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ujson"
+  ],
+  "excludes": [
+    "alembic",
+    "**/__pycache__",
+    "**/.direnv",
+    "**/.eggs",
+    "**/.git",
+    "**/.hg",
+    "**/.mypy_cache",
+    "**/.nox",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.svn",
+    "**/.tox",
+    "**/.venv",
+    "**/venv"
+  ],
+  "checked_directory_allowlist": [
+    "/app/backend/src/app"
+  ],
+  "checked_directory_blocklist": [],
+  "extensions": [],
+  "log_path": "/app/backend/.pyre",
+  "global_root": "/app/backend",
+  "debug": false,
+  "python_version": {
+    "major": 3,
+    "minor": 10,
+    "micro": 0
+  },
+  "system_platform": "linux",
+  "shared_memory": {},
+  "parallel": true,
+  "number_of_workers": 3,
+  "additional_logging_sections": [],
+  "show_error_traces": false,
+  "strict": false
+}
+2025-05-22 02:50:47,544 [PID 3297] INFO  Initializing shared memory (heap_size: 8589934592, dep_table_pow: 1, hash_table_pow: 26)
+2025-05-22 02:50:47,555 [PID 3297] INFO  Building module tracker...
+2025-05-22 02:50:47,738 [PID 3297] PERFORMANCE  Module tracker built: 0.186s
+2025-05-22 02:50:47,739 [PID 3297] PERFORMANCE  Full environment built: 0.187s
+2025-05-22 02:50:47,739 [PID 3297] INFO  Collecting all definitions...
+2025-05-22 02:50:47,944 [PID 3297] PERFORMANCE  Collected definitions (defines: 197): 0.205s
+2025-05-22 02:50:47,945 [PID 3297] INFO  Checking 197 functions...
+2025-05-22 02:50:48,494 [PID 3297] INFO  Processed 33 of 197 functions
+2025-05-22 02:50:48,589 [PID 3297] INFO  Processed 66 of 197 functions
+2025-05-22 02:50:48,599 [PID 3297] INFO  Processed 99 of 197 functions
+2025-05-22 02:50:48,692 [PID 3297] INFO  Processed 132 of 197 functions
+2025-05-22 02:50:48,713 [PID 3297] INFO  Processed 164 of 197 functions
+2025-05-22 02:50:48,788 [PID 3297] INFO  Processed 197 of 197 functions
+2025-05-22 02:50:48,789 [PID 3297] PERFORMANCE  Check_TypeCheck: 0.847s
+2025-05-22 02:50:48,789 [PID 3297] MEMORY  Shared memory size post-typecheck (size: 1)
+2025-05-22 02:50:48,789 [PID 3297] INFO  Postprocessing 40 sources...
+2025-05-22 02:50:48,840 [PID 3297] INFO  Postprocessed 14 of 40 sources
+2025-05-22 02:50:48,840 [PID 3297] INFO  Postprocessed 28 of 40 sources
+2025-05-22 02:50:48,851 [PID 3297] INFO  Postprocessed 40 of 40 sources
+2025-05-22 02:50:48,851 [PID 3297] PERFORMANCE  Check_Postprocessing: 0.055s
+2025-05-22 02:50:48,851 [PID 3297] PERFORMANCE  Check (request kind: FullCheck): 1.296s
+2025-05-22 02:50:48,916 [PID 3297] ERROR Found 307 type errors!
+2025-05-22 02:52:12,945 [PID 3579] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-22 02:52:12,945 [PID 3579] INFO Pyre binary is located at `/app/backend/.venv/bin/pyre.bin`
+2025-05-22 02:52:12,946 [PID 3579] INFO Could not determine the number of Pyre workers from configuration. Auto-set the value to 3.
+2025-05-22 02:52:12,946 [PID 3579] WARNING '/app/backend/site-packages' does not match any paths.
+2025-05-22 02:52:12,946 [PID 3579] ERROR Invalid configuration: Invalid path SimpleRawElement(root='/app/backend/site-packages'): does not exist.
+2025-05-22 02:52:59,531 [PID 3846] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-22 02:52:59,532 [PID 3846] INFO Pyre binary is located at `/app/backend/.venv/bin/pyre.bin`
+2025-05-22 02:52:59,533 [PID 3846] INFO Could not determine the number of Pyre workers from configuration. Auto-set the value to 3.
+2025-05-22 02:52:59,533 [PID 3846] INFO No typeshed specified, looking for it...
+2025-05-22 02:52:59,533 [PID 3846] INFO Found: `/app/backend/.venv/lib/pyre_check/typeshed`
+2025-05-22 02:52:59,534 [PID 3846] INFO Writing arguments into /tmp/pyre_arguments_kbgj6crv.json...
+2025-05-22 02:52:59,534 [PID 3846] DEBUG Arguments:
+{
+  "source_paths": {
+    "kind": "simple",
+    "paths": [
+      "/app/backend/src/app"
+    ]
+  },
+  "search_paths": [
+    "/app/backend/.venv/lib/python3.10/site-packages",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stdlib",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ExifRead",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyMySQL",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyYAML",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/aiofiles",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/boto",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/chevron",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/colorama",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ldap3",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/mysqlclient",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/paramiko",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/psycopg2",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pycurl",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/python-dateutil",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pytz",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/regex",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/requests",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/retry",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/tqdm",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ujson"
+  ],
+  "excludes": [
+    "alembic",
+    "**/__pycache__",
+    "**/.direnv",
+    "**/.eggs",
+    "**/.git",
+    "**/.hg",
+    "**/.mypy_cache",
+    "**/.nox",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.svn",
+    "**/.tox",
+    "**/.venv",
+    "**/venv"
+  ],
+  "checked_directory_allowlist": [
+    "/app/backend/src/app"
+  ],
+  "checked_directory_blocklist": [],
+  "extensions": [],
+  "log_path": "/app/backend/.pyre",
+  "global_root": "/app/backend",
+  "debug": false,
+  "python_version": {
+    "major": 3,
+    "minor": 10,
+    "micro": 0
+  },
+  "system_platform": "linux",
+  "shared_memory": {},
+  "parallel": true,
+  "number_of_workers": 3,
+  "additional_logging_sections": [],
+  "show_error_traces": false,
+  "strict": false
+}
+2025-05-22 02:52:59,576 [PID 3846] INFO  Initializing shared memory (heap_size: 8589934592, dep_table_pow: 1, hash_table_pow: 26)
+2025-05-22 02:52:59,576 [PID 3846] INFO  Building module tracker...
+2025-05-22 02:52:59,892 [PID 3846] PERFORMANCE  Module tracker built: 0.312s
+2025-05-22 02:52:59,892 [PID 3846] PERFORMANCE  Full environment built: 0.312s
+2025-05-22 02:52:59,892 [PID 3846] INFO  Collecting all definitions...
+2025-05-22 02:52:59,994 [PID 3846] PERFORMANCE  Collected definitions (defines: 197): 0.110s
+2025-05-22 02:52:59,994 [PID 3846] INFO  Checking 197 functions...
+2025-05-22 02:53:03,052 [PID 3846] INFO  Processed 33 of 197 functions
+2025-05-22 02:53:03,654 [PID 3846] INFO  Processed 66 of 197 functions
+2025-05-22 02:53:03,675 [PID 3846] INFO  Processed 99 of 197 functions
+2025-05-22 02:53:03,728 [PID 3846] INFO  Processed 132 of 197 functions
+2025-05-22 02:53:03,810 [PID 3846] INFO  Processed 164 of 197 functions
+2025-05-22 02:53:04,149 [PID 3846] INFO  Processed 197 of 197 functions
+2025-05-22 02:53:04,149 [PID 3846] PERFORMANCE  Check_TypeCheck: 4.152s
+2025-05-22 02:53:04,149 [PID 3846] MEMORY  Shared memory size post-typecheck (size: 7)
+2025-05-22 02:53:04,149 [PID 3846] INFO  Postprocessing 40 sources...
+2025-05-22 02:53:04,190 [PID 3846] INFO  Postprocessed 12 of 40 sources
+2025-05-22 02:53:04,201 [PID 3846] INFO  Postprocessed 26 of 40 sources
+2025-05-22 02:53:04,201 [PID 3846] INFO  Postprocessed 40 of 40 sources
+2025-05-22 02:53:04,201 [PID 3846] PERFORMANCE  Check_Postprocessing: 0.047s
+2025-05-22 02:53:04,201 [PID 3846] PERFORMANCE  Check (request kind: FullCheck): 4.623s
+2025-05-22 02:53:04,226 [PID 3846] ERROR Found 135 type errors!
+2025-05-22 02:54:11,706 [PID 4129] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-22 02:54:11,706 [PID 4129] INFO Pyre binary is located at `/app/backend/.venv/bin/pyre.bin`
+2025-05-22 02:54:11,707 [PID 4129] INFO Could not determine the number of Pyre workers from configuration. Auto-set the value to 3.
+2025-05-22 02:54:11,707 [PID 4129] INFO No typeshed specified, looking for it...
+2025-05-22 02:54:11,707 [PID 4129] INFO Found: `/app/backend/.venv/lib/pyre_check/typeshed`
+2025-05-22 02:54:11,708 [PID 4129] INFO Writing arguments into /tmp/pyre_arguments_7hp7cne4.json...
+2025-05-22 02:54:11,708 [PID 4129] DEBUG Arguments:
+{
+  "source_paths": {
+    "kind": "simple",
+    "paths": [
+      "/app/backend/src"
+    ]
+  },
+  "search_paths": [
+    "/app/backend/.venv/lib/python3.10/site-packages",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stdlib",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ExifRead",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyMySQL",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyYAML",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/aiofiles",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/boto",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/chevron",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/colorama",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ldap3",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/mysqlclient",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/paramiko",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/psycopg2",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pycurl",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/python-dateutil",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pytz",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/regex",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/requests",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/retry",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/tqdm",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ujson"
+  ],
+  "excludes": [
+    "alembic",
+    "**/__pycache__",
+    "**/.direnv",
+    "**/.eggs",
+    "**/.git",
+    "**/.hg",
+    "**/.mypy_cache",
+    "**/.nox",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.svn",
+    "**/.tox",
+    "**/.venv",
+    "**/venv"
+  ],
+  "checked_directory_allowlist": [
+    "/app/backend/src"
+  ],
+  "checked_directory_blocklist": [],
+  "extensions": [],
+  "log_path": "/app/backend/.pyre",
+  "global_root": "/app/backend",
+  "debug": false,
+  "python_version": {
+    "major": 3,
+    "minor": 10,
+    "micro": 0
+  },
+  "system_platform": "linux",
+  "shared_memory": {},
+  "parallel": true,
+  "number_of_workers": 3,
+  "additional_logging_sections": [],
+  "show_error_traces": false,
+  "strict": false
+}
+2025-05-22 02:54:11,751 [PID 4129] INFO  Initializing shared memory (heap_size: 8589934592, dep_table_pow: 1, hash_table_pow: 26)
+2025-05-22 02:54:11,752 [PID 4129] INFO  Building module tracker...
+2025-05-22 02:54:12,009 [PID 4129] PERFORMANCE  Module tracker built: 0.255s
+2025-05-22 02:54:12,009 [PID 4129] PERFORMANCE  Full environment built: 0.255s
+2025-05-22 02:54:12,009 [PID 4129] INFO  Collecting all definitions...
+2025-05-22 02:54:12,132 [PID 4129] PERFORMANCE  Collected definitions (defines: 199): 0.130s
+2025-05-22 02:54:12,133 [PID 4129] INFO  Checking 199 functions...
+2025-05-22 02:54:14,835 [PID 4129] INFO  Processed 34 of 199 functions
+2025-05-22 02:54:14,989 [PID 4129] INFO  Processed 68 of 199 functions
+2025-05-22 02:54:14,999 [PID 4129] INFO  Processed 102 of 199 functions
+2025-05-22 02:54:15,470 [PID 4129] INFO  Processed 131 of 199 functions
+2025-05-22 02:54:15,481 [PID 4129] INFO  Processed 165 of 199 functions
+2025-05-22 02:54:15,747 [PID 4129] INFO  Processed 199 of 199 functions
+2025-05-22 02:54:15,747 [PID 4129] PERFORMANCE  Check_TypeCheck: 3.608s
+2025-05-22 02:54:15,748 [PID 4129] MEMORY  Shared memory size post-typecheck (size: 7)
+2025-05-22 02:54:15,748 [PID 4129] INFO  Postprocessing 42 sources...
+2025-05-22 02:54:15,789 [PID 4129] INFO  Postprocessed 12 of 42 sources
+2025-05-22 02:54:15,799 [PID 4129] INFO  Postprocessed 27 of 42 sources
+2025-05-22 02:54:15,800 [PID 4129] INFO  Postprocessed 42 of 42 sources
+2025-05-22 02:54:15,800 [PID 4129] PERFORMANCE  Check_Postprocessing: 0.054s
+2025-05-22 02:54:15,800 [PID 4129] PERFORMANCE  Check (request kind: FullCheck): 4.048s
+2025-05-22 02:54:15,823 [PID 4129] ERROR Found 46 type errors!
+2025-05-22 02:55:30,859 [PID 4456] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-22 02:55:30,860 [PID 4456] INFO Pyre binary is located at `/app/backend/.venv/bin/pyre.bin`
+2025-05-22 02:55:30,861 [PID 4456] INFO Could not determine the number of Pyre workers from configuration. Auto-set the value to 3.
+2025-05-22 02:55:30,861 [PID 4456] INFO No typeshed specified, looking for it...
+2025-05-22 02:55:30,861 [PID 4456] INFO Found: `/app/backend/.venv/lib/pyre_check/typeshed`
+2025-05-22 02:55:30,862 [PID 4456] INFO Writing arguments into /tmp/pyre_arguments_e98o_je5.json...
+2025-05-22 02:55:30,862 [PID 4456] DEBUG Arguments:
+{
+  "source_paths": {
+    "kind": "simple",
+    "paths": [
+      "/app/backend/src"
+    ]
+  },
+  "search_paths": [
+    "/app/backend/.venv/lib/python3.10/site-packages",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stdlib",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ExifRead",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyMySQL",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/PyYAML",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/aiofiles",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/boto",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/chevron",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/colorama",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ldap3",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/mysqlclient",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/paramiko",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/psycopg2",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pycurl",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/python-dateutil",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/pytz",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/regex",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/requests",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/retry",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/tqdm",
+    "/app/backend/.venv/lib/pyre_check/typeshed/stubs/ujson"
+  ],
+  "excludes": [
+    "alembic",
+    "src/setup.py",
+    "**/__pycache__",
+    "**/.direnv",
+    "**/.eggs",
+    "**/.git",
+    "**/.hg",
+    "**/.mypy_cache",
+    "**/.nox",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.svn",
+    "**/.tox",
+    "**/.venv",
+    "**/venv"
+  ],
+  "checked_directory_allowlist": [
+    "/app/backend/src"
+  ],
+  "checked_directory_blocklist": [],
+  "extensions": [],
+  "log_path": "/app/backend/.pyre",
+  "global_root": "/app/backend",
+  "debug": false,
+  "python_version": {
+    "major": 3,
+    "minor": 10,
+    "micro": 0
+  },
+  "system_platform": "linux",
+  "shared_memory": {},
+  "parallel": true,
+  "number_of_workers": 3,
+  "additional_logging_sections": [],
+  "show_error_traces": false,
+  "strict": false
+}
+2025-05-22 02:55:30,895 [PID 4456] INFO  Initializing shared memory (heap_size: 8589934592, dep_table_pow: 1, hash_table_pow: 26)
+2025-05-22 02:55:30,905 [PID 4456] INFO  Building module tracker...
+2025-05-22 02:55:31,120 [PID 4456] PERFORMANCE  Module tracker built: 0.220s
+2025-05-22 02:55:31,120 [PID 4456] PERFORMANCE  Full environment built: 0.220s
+2025-05-22 02:55:31,120 [PID 4456] INFO  Collecting all definitions...
+2025-05-22 02:55:31,243 [PID 4456] PERFORMANCE  Collected definitions (defines: 199): 0.121s
+2025-05-22 02:55:31,243 [PID 4456] INFO  Checking 199 functions...
+2025-05-22 02:55:33,459 [PID 4456] INFO  Processed 34 of 199 functions
+2025-05-22 02:55:33,644 [PID 4456] INFO  Processed 68 of 199 functions
+2025-05-22 02:55:33,675 [PID 4456] INFO  Processed 102 of 199 functions
+2025-05-22 02:55:34,012 [PID 4456] INFO  Processed 136 of 199 functions
+2025-05-22 02:55:34,013 [PID 4456] INFO  Processed 165 of 199 functions
+2025-05-22 02:55:34,278 [PID 4456] INFO  Processed 199 of 199 functions
+2025-05-22 02:55:34,279 [PID 4456] PERFORMANCE  Check_TypeCheck: 3.031s
+2025-05-22 02:55:34,279 [PID 4456] MEMORY  Shared memory size post-typecheck (size: 7)
+2025-05-22 02:55:34,279 [PID 4456] INFO  Postprocessing 42 sources...
+2025-05-22 02:55:34,320 [PID 4456] INFO  Postprocessed 15 of 42 sources
+2025-05-22 02:55:34,320 [PID 4456] INFO  Postprocessed 27 of 42 sources
+2025-05-22 02:55:34,320 [PID 4456] INFO  Postprocessed 42 of 42 sources
+2025-05-22 02:55:34,320 [PID 4456] PERFORMANCE  Check_Postprocessing: 0.048s
+2025-05-22 02:55:34,320 [PID 4456] PERFORMANCE  Check (request kind: FullCheck): 3.421s
+2025-05-22 02:55:34,343 [PID 4456] ERROR Found 46 type errors!
