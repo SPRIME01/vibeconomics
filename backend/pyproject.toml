@@ -4,32 +4,32 @@ version = "0.1.0"
 description = ""
 requires-python = ">=3.10,<4.0"
 dependencies = [
-    "fastapi[standard]<1.0.0,>=0.114.2",
-    "python-multipart<1.0.0,>=0.0.7",
+    "fastapi[standard]<1.0.0,>=0.115.12",
+    "python-multipart<1.0.0,>=0.0.20",
     "email-validator<3.0.0.0,>=2.1.0.post1",
     "passlib[bcrypt]<2.0.0,>=1.7.4",
-    "tenacity<9.0.0,>=8.2.3",
-    "pydantic>2.0",
+    "tenacity<10.0.0,>=9.1.2",
+    "pydantic>=2.11.5",
     "emails<1.0,>=0.6",
-    "jinja2<4.0.0,>=3.1.4",
-    "alembic<2.0.0,>=1.12.1",
-    "httpx<1.0.0,>=0.25.1",
-    "psycopg[binary]<4.0.0,>=3.1.13",
-    "sqlmodel<1.0.0,>=0.0.21",
+    "jinja2<4.0.0,>=3.1.6",
+    "alembic<2.0.0,>=1.16.1",
+    "httpx<1.0.0,>=0.28.1",
+    "psycopg[binary]<4.0.0,>=3.2.9",
+    "sqlmodel<1.0.0,>=0.0.24",
     # Pin bcrypt until passlib supports the latest
-    "bcrypt==4.0.1",
-    "pydantic-settings<3.0.0,>=2.2.1",
-    "sentry-sdk[fastapi]<2.0.0,>=1.40.6",
-    "pyjwt<3.0.0,>=2.8.0",
+    "bcrypt==4.3.0",
+    "pydantic-settings<3.0.0,>=2.9.1",
+    "sentry-sdk[fastapi]<3.0.0,>=2.29.1",
+    "pyjwt<3.0.0,>=2.10.1",
 ]
 
 [tool.uv]
 dev-dependencies = [
-    "pytest<8.0.0,>=7.4.3",
+    "pytest<9.0.0,>=8.3.5",
     "pyre-check>=0.9.0",
-    "ruff<1.0.0,>=0.2.2",
-    "pre-commit<4.0.0,>=3.6.2",
-    "coverage<8.0.0,>=7.4.3",
+    "ruff<1.0.0,>=0.11.11",
+    "pre-commit<5.0.0,>=4.2.0",
+    "coverage<8.0.0,>=7.8.2",
 ]
 
 [build-system]
