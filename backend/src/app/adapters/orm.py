@@ -1,4 +1,3 @@
-\
 import uuid
 from pydantic import EmailStr # Required for User table
 from sqlmodel import Field, Relationship, SQLModel, Session, create_engine, select # Added create_engine, select, Session
@@ -14,7 +13,7 @@ from app.config import settings
 # Or crud.create_user needs to be available/refactored.
 # For now, let's assume a UserCreate schema will be available or adapted.
 # We will need to address the UserCreate and crud.create_user dependency for init_db carefully.
-from app.entrypoints.schemas import UserCreateInput # Using an input DTO
+from app.domain.user import UserCreate # Using an input DTO
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
@@ -91,4 +90,3 @@ class Item(SQLModel, table=True):
     # SQLModel handles cascade delete via the foreign_key constraint typically, or it can be specified in the relationship.
     # For now, relying on DB-level cascade via foreign_key. If issues arise, can add cascade_delete=True to Relationship.
     owner: User = Relationship(back_populates="items")
-
