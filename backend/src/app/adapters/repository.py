@@ -73,7 +73,8 @@ class SQLAlchemyRepository(AbstractRepository[T, U, V]):
         return obj
 
 # Example of a specific repository (can be defined here or in a dedicated user_repository.py)
-# from app.models import User, UserCreate, UserUpdate # These would be ORM/Table models
+# from app.adapters.orm import User
+# from app.entrypoints.schemas import UserCreate, UserUpdate
 
 # class UserRepository(SQLAlchemyRepository[User, UserCreate, UserUpdate]):
 #     def __init__(self, session: Session):

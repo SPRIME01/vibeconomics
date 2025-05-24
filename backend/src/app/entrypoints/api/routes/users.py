@@ -15,15 +15,14 @@ from app.security import get_password_hash, verify_password
 from app.entrypoints.schemas import (
     Message,
     UpdatePasswordInput,
-    UserCreateInput,
     UserPublic,
     UserRegisterInput,
     UsersPublic,
-    UserUpdateInput,
     UserUpdateMeInput,
 )
 from app.adapters.orm import User, Item
 from app.utils import generate_new_account_email, send_email
+from app.domain.user import UserCreate, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -50,7 +49,7 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
 @router.post(
     "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
 )
-def create_user(*, session: SessionDep, user_in: UserCreateInput) -> Any:
+def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
     Create new user.
     """
@@ -149,7 +148,7 @@ def register_user(session: SessionDep, user_in: UserRegisterInput) -> Any:
             status_code=400,
             detail="The user with this email already exists in the system",
         )
-    user_create = UserCreateInput.model_validate(user_in)
+    user_create = UserCreate.model_validate(user_in)
     user = crud.create_user(session=session, user_create=user_create)
     return user
 
@@ -181,7 +180,7 @@ def update_user(
     *,
     session: SessionDep,
     user_id: uuid.UUID,
-    user_in: UserUpdateInput,
+    user_in: UserUpdate,
 ) -> Any:
     """
     Update a user.
