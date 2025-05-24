@@ -13,7 +13,7 @@ from app.config import settings
 # Or crud.create_user needs to be available/refactored.
 # For now, let's assume a UserCreate schema will be available or adapted.
 # We will need to address the UserCreate and crud.create_user dependency for init_db carefully.
-from app.domain.user import UserCreate # Using an input DTO
+from app.entrypoints.schemas import UserCreate # Using an input DTO
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 

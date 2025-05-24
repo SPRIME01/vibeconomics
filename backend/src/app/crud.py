@@ -7,12 +7,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select  # Added import for select
 
 from app.adapters.orm import User, Item  # Corrected: ORM models for DB operations
-from app.entrypoints.schemas import UserCreateInput, UserUpdateInput, ItemCreateInput
+from app.domain.user import UserCreate, UserUpdate  # Corrected import paths
+from app.entrypoints.schemas import ItemCreateInput
 from app.security import get_password_hash, verify_password  # Corrected: Security utilities
 from app.config import settings  # Existing import, confirmed correct
 
 
-def create_user(*, session: Session, user_create: UserCreateInput) -> User:
+def create_user(*, session: Session, user_create: UserCreate) -> User:
     db_obj = User.model_validate(
         user_create, update={"hashed_password": get_password_hash(user_create.password)}
     )
@@ -22,7 +23,7 @@ def create_user(*, session: Session, user_create: UserCreateInput) -> User:
     return db_obj
 
 
-def update_user(*, session: Session, db_user: User, user_in: UserUpdateInput) -> Any:
+def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     user_data = user_in.model_dump(exclude_unset=True)
     extra_data = {}
     if "password" in user_data:
