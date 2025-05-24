@@ -5,11 +5,11 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, delete  # This is SQLModel's Session, not SQLAlchemy's
 
 from app.config import settings
-from app.core.db import engine, init_db  # Updated: orm -> core.db
-from app.main import app  # Assuming app.main still holds the FastAPI app for now
-from app.models import Item, User  # Updated: orm -> models
-from app.tests.utils.user import authentication_token_from_email
-from app.tests.utils.utils import get_superuser_token_headers
+from app.adapters.orm import engine, init_db  # Updated: orm -> core.db
+from app.entrypoints.fastapi_app import app  # Assuming app.main still holds the FastAPI app for now
+from app.adapters.orm import Item, User  # Updated: orm -> models
+from tests.utils.user import authentication_token_from_email # Corrected path
+from tests.utils.utils import get_superuser_token_headers # Corrected path
 
 
 @pytest.fixture(scope="session", autouse=True)

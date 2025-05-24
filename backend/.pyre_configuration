@@ -6,7 +6,7 @@
     ".venv/lib/python3.10/site-packages"
   ],
   "exclude": [
-    "alembic",
+    "src/app/adapters/alembic_scripts",
     "src/setup.py",
     "**/__pycache__",
     "**/.direnv",

@@ -68,7 +68,6 @@ testpaths = [
     "src/app/entrypoints/api/routes",
     "src/app/entrypoints/fastapi_app.py",
     "src/app/entrypoints/api/deps.py",
-    "src/app/adapters/orm.py",
     "src/app/backend_pre_start.py",
     "src/app/config.py",
     "src/app/crud.py",
