@@ -1,42 +1,38 @@
-from collections.abc import Generator
-
 import pytest
-from fastapi.testclient import TestClient
-from sqlmodel import Session, delete  # This is SQLModel's Session, not SQLAlchemy's
+from typing import Any, Callable, Generator, List # Added Generator, List
+from unittest.mock import MagicMock
 
-from app.config import settings
-from app.adapters.orm import engine, init_db  # Updated: orm -> core.db
-from app.entrypoints.fastapi_app import app  # Assuming app.main still holds the FastAPI app for now
-from app.adapters.orm import Item, User  # Updated: orm -> models
-from tests.utils.user import authentication_token_from_email # Corrected path
-from tests.utils.utils import get_superuser_token_headers # Corrected path
+from app.core.base_aggregate import DomainEvent, AggregateId
+from app.service_layer.unit_of_work import AbstractUnitOfWork
+from app.service_layer.message_bus import AbstractMessageBus, EventT
+from app.adapters.message_bus_inmemory import InMemoryMessageBus # For testing
 
+# Mock UoW for testing
+class MockUnitOfWork(AbstractUnitOfWork):
+    def __init__(self) -> None:
+        self.committed: bool = False # Explicitly typed
+        self.rolled_back: bool = False # Explicitly typed
 
-@pytest.fixture(scope="session", autouse=True)
-def db() -> Generator[Session, None, None]:
-    with Session(engine) as session:
-        init_db(session)
-        yield session
-        statement = delete(Item)
-        session.execute(statement)
-        statement = delete(User)
-        session.execute(statement)
-        session.commit()
+    def commit(self) -> None:
+        self.committed = True
 
+    def rollback(self) -> None:
+        self.rolled_back = True
 
-@pytest.fixture(scope="module")
-def client() -> Generator[TestClient, None, None]:
-    with TestClient(app) as c:
-        yield c
+@pytest.fixture
+def mock_uow() -> MockUnitOfWork: # Removed self
+    return MockUnitOfWork()
 
+# In-memory message bus fixture for testing event handling
+@pytest.fixture
+def in_memory_message_bus() -> InMemoryMessageBus[DomainEvent]: # Removed self
+    return InMemoryMessageBus[DomainEvent]()
 
-@pytest.fixture(scope="module")
-def superuser_token_headers(client: TestClient) -> dict[str, str]:
-    return get_superuser_token_headers(client)
+# Example Domain Event for testing
+class TestEvent(DomainEvent):
+    data: str
 
-
-@pytest.fixture(scope="module")
-def normal_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:
-    return authentication_token_from_email(
-        client=client, email=settings.EMAIL_TEST_USER, db=db
-    )
+# Mock command bus for testing command dispatch
+@pytest.fixture
+def mock_command_bus() -> MagicMock: # Removed self
+    return MagicMock()

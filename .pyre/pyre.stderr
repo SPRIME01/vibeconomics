@@ -1,3 +1,6 @@
 2025-05-22 02:47:52,331 [PID 2259] INFO No binary specified, looking for `pyre.bin` in PATH
 2025-05-22 02:47:52,332 [PID 2259] INFO Pyre binary is located at `/home/swebot/.local/bin/pyre.bin`
 2025-05-22 02:47:52,332 [PID 2259] ERROR Invalid configuration: Cannot find any source files to analyze. Either `source_directories` or `targets` must be specified.
+2025-05-24 18:28:34,964 [PID 4669] INFO No binary specified, looking for `pyre.bin` in PATH
+2025-05-24 18:28:34,965 [PID 4669] INFO Pyre binary is located at `/home/swebot/.local/bin/pyre.bin`
+2025-05-24 18:28:34,965 [PID 4669] ERROR Invalid configuration: Cannot find any source files to analyze. Either `source_directories` or `targets` must be specified.
