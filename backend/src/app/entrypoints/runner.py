@@ -1,14 +1,13 @@
 import logging
+from typing import Annotated
+
 import typer
-from typing_extensions import Annotated
-
-from sqlmodel import Session
 from sqlalchemy import Engine
+from sqlmodel import Session, select
 from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
-from sqlmodel import select
 
-from app.adapters.orm import engine as default_engine, init_db as initialize_database
-from app.config import settings
+from app.adapters.orm import engine as default_engine
+from app.adapters.orm import init_db as initialize_database
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,6 +16,7 @@ runner_app = typer.Typer()
 
 max_tries = 60 * 5  # 5 minutes
 wait_seconds = 1
+
 
 @retry(
     stop=stop_after_attempt(max_tries),
@@ -34,18 +34,24 @@ def pre_start_db_check(db_engine: Engine) -> None:
         logger.error(f"Database readiness check failed: {e}")
         raise
 
+
 @runner_app.command()
 def pre_start(
-    db_engine: Annotated[Engine, typer.Option(help="Database engine to use.")] = default_engine
+    db_engine: Annotated[
+        Engine, typer.Option(help="Database engine to use.")
+    ] = default_engine,
 ) -> None:
     """Checks if the database is awake and ready."""
     logger.info("Initializing service - DB check")
     pre_start_db_check(db_engine)
     logger.info("Service finished initializing - DB check complete")
 
+
 @runner_app.command()
 def create_initial_data(
-    db_engine: Annotated[Engine, typer.Option(help="Database engine to use.")] = default_engine
+    db_engine: Annotated[
+        Engine, typer.Option(help="Database engine to use.")
+    ] = default_engine,
 ) -> None:
     """Creates initial data in the database, including a default superuser."""
     logger.info("Creating initial data")

@@ -3,8 +3,8 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
-from app.entrypoints.api.main import api_router
 from app.config import settings
+from app.entrypoints.api.main import api_router
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -30,6 +30,7 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
 
+
 @app.get("/", tags=["Root"])
 async def read_root():
     return {
@@ -38,7 +39,8 @@ async def read_root():
         "documentation": "/docs",
         "api_version": settings.API_V1_STR.replace("/", ""),
         "project_name": settings.PROJECT_NAME,
-        "status": "✨ Shiny and Operational ✨"
+        "status": "✨ Shiny and Operational ✨",
     }
+
 
 app.include_router(api_router, prefix=settings.API_V1_STR)

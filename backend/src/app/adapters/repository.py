@@ -5,9 +5,10 @@ from uuid import UUID
 from sqlmodel import Session, SQLModel
 
 # Generic TypeVariables for Repository
-T = TypeVar("T", bound=SQLModel) # Type of the entity
-U = TypeVar("U", bound=SQLModel) # Type of the create schema
-V = TypeVar("V", bound=SQLModel) # Type of the update schema
+T = TypeVar("T", bound=SQLModel)  # Type of the entity
+U = TypeVar("U", bound=SQLModel)  # Type of the create schema
+V = TypeVar("V", bound=SQLModel)  # Type of the update schema
+
 
 class AbstractRepository(ABC, Generic[T, U, V]):
     """Abstract Repository for CRUD operations."""
@@ -50,7 +51,7 @@ class SQLAlchemyRepository(AbstractRepository[T, U, V]):
         return list(self.session.query(self.model).offset(skip).limit(limit).all())
 
     def create(self, obj_in: U) -> T:
-        db_obj = self.model.model_validate(obj_in) # SQLModel v0.0.12+
+        db_obj = self.model.model_validate(obj_in)  # SQLModel v0.0.12+
         self.session.add(db_obj)
         self.session.commit()
         self.session.refresh(db_obj)
@@ -71,6 +72,7 @@ class SQLAlchemyRepository(AbstractRepository[T, U, V]):
             self.session.delete(obj)
             self.session.commit()
         return obj
+
 
 # Example of a specific repository (can be defined here or in a dedicated user_repository.py)
 # from app.models import User, UserCreate, UserUpdate # These would be ORM/Table models

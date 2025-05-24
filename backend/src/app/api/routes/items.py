@@ -1,29 +1,23 @@
-from typing import Any, Annotated
 import uuid
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from fastapi import APIRouter, HTTPException
+from sqlalchemy import func, select
 
-from app import crud
 from app.entrypoints.schemas import (
     Item,
     ItemCreate,
-    ItemUpdate,
-    User,
-    ItemsPublic,
     ItemPublic,
+    ItemsPublic,
+    ItemUpdate,
     Message,
 )
-from app.api import deps
 
 router = APIRouter(prefix="/items", tags=["items"])
 
 
 @router.get("/", response_model=ItemsPublic)
-def read_items(
-    session: Any, current_user: Any, skip: int = 0, limit: int = 100
-) -> Any:
+def read_items(session: Any, current_user: Any, skip: int = 0, limit: int = 100) -> Any:
     """
     Retrieve items.
     """
@@ -65,9 +59,7 @@ def read_item(session: Any, current_user: Any, id: uuid.UUID) -> Any:
 
 
 @router.post("/", response_model=ItemPublic)
-def create_item(
-    *, session: Any, current_user: Any, item_in: ItemCreate
-) -> Any:
+def create_item(*, session: Any, current_user: Any, item_in: ItemCreate) -> Any:
     """
     Create new item.
     """

@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends
 from pydantic.networks import EmailStr
 
-from app.entrypoints.api.deps import get_current_active_superuser # Adjusted import
+from app.entrypoints.api.deps import get_current_active_superuser  # Adjusted import
 from app.entrypoints.schemas import Message  # Updated: Message schema
 from app.utils import generate_test_email, send_email
 

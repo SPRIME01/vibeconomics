@@ -10,10 +10,10 @@ from sqlmodel import Session
 
 # TODO: Refactor security functions to an appropriate layer (e.g., app.service_layer or app.domain)
 from app import security  # Updated import
-from app.config import settings
 from app.adapters.orm import engine
+from app.config import settings
 from app.domain.user import User  # Domain model for type hinting
-from app.entrypoints.schemas import TokenPayload # Import TokenPayload schema
+from app.entrypoints.schemas import TokenPayload  # Import TokenPayload schema
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -40,7 +40,9 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user = session.get(User, token_data.sub) # Uses User from app.domain.user for session.get type hint
+    user = session.get(
+        User, token_data.sub
+    )  # Uses User from app.domain.user for session.get type hint
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if not user.is_active:

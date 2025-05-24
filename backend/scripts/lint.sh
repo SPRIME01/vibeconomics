@@ -3,6 +3,6 @@
 set -e
 set -x
 
-pyre
+pyre check
 ruff check src/app
 ruff format src/app --check

@@ -6,25 +6,29 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col, delete, func, select
 
 from app import crud
+from app.adapters.orm import Item, User  # ORM model for DB operations
+from app.config import settings  # Updated: config module
 from app.entrypoints.api.deps import (
     CurrentUser,
     SessionDep,
     get_current_active_superuser,
-) # Adjusted import
-from app.config import settings  # Updated: config module
-from app.security import get_password_hash, verify_password  # Updated: security functions
+)  # Adjusted import
+
 # Updated: schemas and models from entrypoints and domain/adapters
 from app.entrypoints.schemas import (
     Message,
     UpdatePasswordInput,  # Changed from UpdatePassword
-    UserCreateInput,      # Changed from UserCreate
+    UserCreateInput,  # Changed from UserCreate
     UserPublic,
-    UserRegisterInput,    # Changed from UserRegister
+    UserRegisterInput,  # Changed from UserRegister
     UsersPublic,
-    UserUpdateInput,      # Changed from UserUpdate
-    UserUpdateMeInput,    # Changed from UserUpdateMe
+    UserUpdateInput,  # Changed from UserUpdate
+    UserUpdateMeInput,  # Changed from UserUpdateMe
 )
-from app.adapters.orm import User, Item  # ORM model for DB operations
+from app.security import (  # Updated: security functions
+    get_password_hash,
+    verify_password,
+)
 from app.utils import generate_new_account_email, send_email
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -52,7 +56,9 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
 @router.post(
     "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
 )
-def create_user(*, session: SessionDep, user_in: UserCreateInput) -> Any:  # Changed from UserCreate
+def create_user(
+    *, session: SessionDep, user_in: UserCreateInput
+) -> Any:  # Changed from UserCreate
     """
     Create new user.
     """
@@ -63,7 +69,9 @@ def create_user(*, session: SessionDep, user_in: UserCreateInput) -> Any:  # Cha
             detail="The user with this email already exists in the system.",
         )
 
-    user = crud.create_user(session=session, user_create=user_in) # user_create expects UserCreateInput
+    user = crud.create_user(
+        session=session, user_create=user_in
+    )  # user_create expects UserCreateInput
     if settings.emails_enabled and user_in.email:
         email_data = generate_new_account_email(
             email_to=user_in.email, username=user_in.email, password=user_in.password
@@ -78,7 +86,10 @@ def create_user(*, session: SessionDep, user_in: UserCreateInput) -> Any:  # Cha
 
 @router.patch("/me", response_model=UserPublic)
 def update_user_me(
-    *, session: SessionDep, user_in: UserUpdateMeInput, current_user: CurrentUser  # Changed from UserUpdateMe
+    *,
+    session: SessionDep,
+    user_in: UserUpdateMeInput,
+    current_user: CurrentUser,  # Changed from UserUpdateMe
 ) -> Any:
     """
     Update own user.
@@ -100,7 +111,10 @@ def update_user_me(
 
 @router.patch("/me/password", response_model=Message)
 def update_password_me(
-    *, session: SessionDep, body: UpdatePasswordInput, current_user: CurrentUser  # Changed from UpdatePassword
+    *,
+    session: SessionDep,
+    body: UpdatePasswordInput,
+    current_user: CurrentUser,  # Changed from UpdatePassword
 ) -> Any:
     """
     Update own password.
@@ -141,7 +155,9 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
 
 
 @router.post("/signup", response_model=UserPublic)
-def register_user(session: SessionDep, user_in: UserRegisterInput) -> Any:  # Changed from UserRegister
+def register_user(
+    session: SessionDep, user_in: UserRegisterInput
+) -> Any:  # Changed from UserRegister
     """
     Create new user without the need to be logged in.
     """
@@ -151,7 +167,7 @@ def register_user(session: SessionDep, user_in: UserRegisterInput) -> Any:  # Ch
             status_code=400,
             detail="The user with this email already exists in the system",
         )
-    user_create = UserCreateInput.model_validate(user_in) # Changed from UserCreate
+    user_create = UserCreateInput.model_validate(user_in)  # Changed from UserCreate
     user = crud.create_user(session=session, user_create=user_create)
     return user
 
@@ -169,7 +185,7 @@ def read_user_by_id(
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
-            detail="The user doesn\'t have enough privileges",
+            detail="The user doesn't have enough privileges",
         )
     return user
 

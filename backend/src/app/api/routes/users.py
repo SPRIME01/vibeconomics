@@ -5,13 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col, delete, func, select
 
 from app import crud
+from app.adapters.orm import Item, User  # ORM model for DB operations
 from app.api.deps import (
     CurrentUser,
     SessionDep,
     get_current_active_superuser,
 )
 from app.config import settings  # Updated: config module
-from app.security import get_password_hash, verify_password  # Updated: security functions
+
 # Updated: schemas and models from entrypoints and domain/adapters
 from app.entrypoints.schemas import (
     Message,
@@ -23,7 +24,10 @@ from app.entrypoints.schemas import (
     UserUpdate,
     UserUpdateMe,
 )
-from app.adapters.orm import User, Item  # ORM model for DB operations
+from app.security import (  # Updated: security functions
+    get_password_hash,
+    verify_password,
+)
 from app.utils import generate_new_account_email, send_email
 
 router = APIRouter(prefix="/users", tags=["users"])

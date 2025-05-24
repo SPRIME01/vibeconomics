@@ -1,5 +1,6 @@
 # backend/src/app/service_layer/services.py
 
+
 class UnitOfWork:
     async def __aenter__(self):
         # Placeholder for UoW setup, e.g., starting a transaction
@@ -21,6 +22,7 @@ class UnitOfWork:
     async def rollback(self):
         # Placeholder for rollback logic
         pass
+
 
 # Example service (to be expanded)
 # from app.adapters.repository import AbstractRepository

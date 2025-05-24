@@ -1,30 +1,35 @@
 # filepath: c:\Users\sprim\FocusAreas\Projects\Dev\vibeconomics\backend\src\app\api\routes\items.py
-from typing import Any, Annotated
 import uuid
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
 
 from app import crud
-from app.entrypoints.schemas import (
-    ItemPublic, # Renamed from Item to ItemPublic for response model
-    ItemCreateInput, # Renamed from ItemCreate
-    ItemUpdateInput, # Renamed from ItemUpdate
-    UserPublic, # Renamed from User to UserPublic, assuming it's for response model
-    ItemsPublic,
-    Message,
+from app.domain.user import (
+    User as DomainUser,  # Import domain User for type hinting current_user
 )
-from app.entrypoints.api import deps # Adjusted import
-from app.domain.user import User as DomainUser # Import domain User for type hinting current_user
+from app.entrypoints.api import deps  # Adjusted import
+from app.entrypoints.schemas import (
+    ItemCreateInput,  # Renamed from ItemCreate
+    ItemPublic,  # Renamed from Item to ItemPublic for response model
+    ItemsPublic,
+    ItemUpdateInput,  # Renamed from ItemUpdate
+    Message,  # Renamed from User to UserPublic, assuming it's for response model
+)
 
 router = APIRouter(prefix="/items", tags=["items"])
 
 
 @router.get("/", response_model=ItemsPublic)
 def read_items(
-    session: Annotated[Session, Depends(deps.get_db)], # Corrected session type hint and dependency
-    current_user: Annotated[DomainUser, Depends(deps.get_current_user)], # Changed to deps.get_current_user and DomainUser
+    session: Annotated[
+        Session, Depends(deps.get_db)
+    ],  # Corrected session type hint and dependency
+    current_user: Annotated[
+        DomainUser, Depends(deps.get_current_user)
+    ],  # Changed to deps.get_current_user and DomainUser
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
@@ -60,13 +65,16 @@ def read_items(
 @router.get("/{id}", response_model=ItemPublic)
 def read_item(
     session: Annotated[Session, Depends(deps.get_db)],
-    current_user: Annotated[DomainUser, Depends(deps.get_current_user)], # Changed to deps.get_current_user and DomainUser
-    id: uuid.UUID
+    current_user: Annotated[
+        DomainUser, Depends(deps.get_current_user)
+    ],  # Changed to deps.get_current_user and DomainUser
+    id: uuid.UUID,
 ) -> Any:
     """
     Get item by ID.
     """
     from app.adapters.orm import Item as ORMItem
+
     item = session.get(ORMItem, id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -79,8 +87,10 @@ def read_item(
 def create_item(
     *,
     session: Annotated[Session, Depends(deps.get_db)],
-    current_user: Annotated[DomainUser, Depends(deps.get_current_user)], # Changed to deps.get_current_user and DomainUser
-    item_in: ItemCreateInput, # Corrected type hint
+    current_user: Annotated[
+        DomainUser, Depends(deps.get_current_user)
+    ],  # Changed to deps.get_current_user and DomainUser
+    item_in: ItemCreateInput,  # Corrected type hint
 ) -> Any:
     """
     Create new item.
@@ -95,14 +105,17 @@ def create_item(
 def update_item(
     *,
     session: Annotated[Session, Depends(deps.get_db)],
-    current_user: Annotated[DomainUser, Depends(deps.get_current_user)], # Changed to deps.get_current_user and DomainUser
+    current_user: Annotated[
+        DomainUser, Depends(deps.get_current_user)
+    ],  # Changed to deps.get_current_user and DomainUser
     id: uuid.UUID,
-    item_in: ItemUpdateInput, # Corrected type hint
+    item_in: ItemUpdateInput,  # Corrected type hint
 ) -> Any:
     """
     Update an item.
     """
     from app.adapters.orm import Item as ORMItem
+
     item = session.get(ORMItem, id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -112,7 +125,7 @@ def update_item(
     # Use crud.update_item if available, or adapt logic here.
     # For now, direct update similar to original, but using item_in (ItemUpdateInput)
     update_dict = item_in.model_dump(exclude_unset=True)
-    item.sqlmodel_update(update_dict) # ORMItem has sqlmodel_update
+    item.sqlmodel_update(update_dict)  # ORMItem has sqlmodel_update
     session.add(item)
     session.commit()
     session.refresh(item)
@@ -122,13 +135,16 @@ def update_item(
 @router.delete("/{id}")
 def delete_item(
     session: Annotated[Session, Depends(deps.get_db)],
-    current_user: Annotated[DomainUser, Depends(deps.get_current_user)], # Changed to deps.get_current_user and DomainUser
-    id: uuid.UUID
+    current_user: Annotated[
+        DomainUser, Depends(deps.get_current_user)
+    ],  # Changed to deps.get_current_user and DomainUser
+    id: uuid.UUID,
 ) -> Message:
     """
     Delete an item.
     """
     from app.adapters.orm import Item as ORMItem
+
     item = session.get(ORMItem, id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
