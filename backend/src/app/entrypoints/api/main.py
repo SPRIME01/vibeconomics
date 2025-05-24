@@ -1,7 +1,6 @@
-# filepath: c:\Users\sprim\FocusAreas\Projects\Dev\vibeconomics\backend\src\app\api\main.py
 from fastapi import APIRouter
 
-from app.entrypoints.api.routes import items, login, private, users, utils # Adjusted import
+from app.entrypoints.api.routes import items, login, private, users, utils
 from app.config import settings
 
 api_router = APIRouter()
