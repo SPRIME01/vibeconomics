@@ -6,9 +6,9 @@ from sqlmodel import Session
 from app.config import settings  # Updated: config
 from app.security import verify_password  # Updated: security
 from app.crud import create_user  # crud is now top-level in app
-from app.entrypoints.schemas import UserCreate  # Updated: schemas
-from app.tests.utils.user import user_authentication_headers
-from app.tests.utils.utils import random_email, random_lower_string
+from app.entrypoints.schemas import UserCreateInput  # Updated: schemas & corrected name
+from tests.utils.user import user_authentication_headers # Corrected path
+from tests.utils.utils import random_email, random_lower_string # Corrected path
 from app.utils import generate_password_reset_token  # utils is now top-level in app
 
 
@@ -77,7 +77,7 @@ def test_reset_password(client: TestClient, db: Session) -> None:
     password = random_lower_string()
     new_password = random_lower_string()
 
-    user_create = UserCreate(
+    user_create = UserCreateInput( # Corrected name
         email=email,
         full_name="Test User",
         password=password,

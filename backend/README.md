@@ -27,7 +27,7 @@ $ source .venv/bin/activate
 
 Make sure your editor is using the correct Python virtual environment, with the interpreter at `backend/.venv/bin/python`.
 
-Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
+Modify or add SQLModel models for data and SQL tables in `./backend/src/app/adapters/orm.py` (for table definitions) and domain models in `./backend/src/app/domain/`, API endpoints in `./backend/src/app/entrypoints/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/src/app/crud.py`.
 
 ## VS Code
 
@@ -74,13 +74,13 @@ that means that you are in a `bash` session inside your container, as a `root` u
 There you can use the `fastapi run --reload` command to run the debug live reloading server.
 
 ```console
-$ fastapi run --reload app/main.py
+root@7f2607af31c3:/app# fastapi run --reload src.app.entrypoints.fastapi_app:app --host 0.0.0.0
 ```
 
 ...it will look like:
 
 ```console
-root@7f2607af31c3:/app# fastapi run --reload app/main.py
+root@7f2607af31c3:/app# fastapi run --reload src.app.entrypoints.fastapi_app:app --host 0.0.0.0
 ```
 
 and then hit enter. That runs the live reloading server that auto reloads when it detects code changes.
@@ -133,9 +133,9 @@ Make sure you create a "revision" of your models and that you "upgrade" your dat
 $ docker compose exec backend bash
 ```
 
-* Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.
+* Alembic's environment (`backend/src/app/adapters/alembic_scripts/env.py`) is configured to use the SQLModel metadata from `backend/src/app/adapters/orm.py`. Table models are defined in `backend/src/app/adapters/orm.py`.
 
-* After changing a model (for example, adding a column), inside the container, create a revision, e.g.:
+* After changing a model (for example, adding a column in `orm.py`), inside the container, create a revision, e.g.:
 
 ```console
 $ alembic revision --autogenerate -m "Add column last_name to User model"
@@ -149,7 +149,7 @@ $ alembic revision --autogenerate -m "Add column last_name to User model"
 $ alembic upgrade head
 ```
 
-If you don't want to use migrations at all, uncomment the lines in the file at `./backend/app/core/db.py` that end in:
+If you don't want to use migrations at all (not recommended), you would typically call `SQLModel.metadata.create_all(engine)` after defining your models and engine. This logic was previously in `./backend/app/core/db.py`, but database setup is now primarily managed in `backend/src/app/adapters/orm.py` (for engine creation) and by Alembic. You would modify `backend/src/app/adapters/orm.py` or a prestart script to include:
 
 ```python
 SQLModel.metadata.create_all(engine)
@@ -161,7 +161,7 @@ and comment the line in the file `scripts/prestart.sh` that contains:
 $ alembic upgrade head
 ```
 
-If you don't want to start with the default models and want to remove them / modify them, from the beginning, without having any previous revision, you can remove the revision files (`.py` Python files) under `./backend/app/alembic/versions/`. And then create a first migration as described above.
+If you don't want to start with the default models and want to remove them / modify them, from the beginning, without having any previous revision, you can remove the revision files (`.py` Python files) under `./backend/src/app/adapters/alembic_scripts/versions/`. And then create a first migration as described above.
 
 ## Email Templates
 
