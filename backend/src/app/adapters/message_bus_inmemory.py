@@ -1,49 +1,56 @@
-import logging
+import asyncio
 from collections import defaultdict
-from collections.abc import Callable  # Dict might not be used directly
+from collections.abc import Callable
 
-from app.service_layer.message_bus import AbstractMessageBus, EventT
-
-logger = logging.getLogger(__name__)
+from app.core.base_aggregate import DomainEvent
 
 
-class InMemoryMessageBus(AbstractMessageBus[EventT]):
-    """An in-memory message bus for handling domain events."""
+class InMemoryMessageBus:
+    """In-memory implementation of message bus for testing and simple deployments."""
 
     def __init__(self) -> None:
-        """Initializes the InMemoryMessageBus with empty subscriptions."""
-        self.subscriptions: defaultdict[
-            type[EventT], list[Callable[[EventT], None]]
+        self.subscriptions: dict[
+            type[DomainEvent], list[Callable[[DomainEvent], None]]
         ] = defaultdict(list)
+        self.published_events: list[DomainEvent] = []
 
-    def publish(self, event: EventT) -> None:
+    async def publish(self, event: DomainEvent) -> None:
         """
         Publishes an event to all subscribed handlers.
 
         Args:
             event: The domain event to publish.
         """
-        event_type: type[EventT] = type(
-            event
-        )  # Removed type: ignore[assignment] as Mypy reported it unused
-        if event_type in self.subscriptions:
-            for handler in self.subscriptions[event_type]:
-                try:
-                    logger.debug(f"Handling event {event} with handler {handler}")
+        self.published_events.append(event)
+
+        # Call all registered handlers for this event type
+        event_type = type(event)
+        for handler in self.subscriptions[event_type]:
+            try:
+                if asyncio.iscoroutinefunction(handler):
+                    await handler(event)
+                else:
                     handler(event)
-                except Exception:
-                    logger.exception(f"Exception handling event {event}")
-                    continue  # Or re-raise, or handle more gracefully
+            except Exception as e:
+                # Log error but don't stop processing other handlers
+                print(f"Error in event handler: {e}")
 
     def subscribe(
-        self, event_type: type[EventT], handler: Callable[[EventT], None]
+        self, event_type: type[DomainEvent], handler: Callable[[DomainEvent], None]
     ) -> None:
         """
         Subscribes a handler to a specific event type.
 
         Args:
-            event_type: The type of domain event to subscribe to.
-            handler: The callable handler to execute when the event is published.
+            event_type: The type of the event to subscribe to.
+            handler: The callable function that will handle the event.
         """
         self.subscriptions[event_type].append(handler)
-        logger.info(f"Handler {handler} subscribed to {event_type}")
+
+    def clear_subscriptions(self) -> None:
+        """Clear all subscriptions - useful for testing."""
+        self.subscriptions.clear()
+
+    def clear_published_events(self) -> None:
+        """Clear published events history - useful for testing."""
+        self.published_events.clear()

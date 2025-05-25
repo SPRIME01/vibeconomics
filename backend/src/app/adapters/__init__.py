@@ -1,4 +1,3 @@
-from .message_bus_inmemory import InMemoryMessageBus  # Changed from Redis
-from .uow_sqlmodel import SqlModelUnitOfWork
+from .message_bus_inmemory import InMemoryMessageBus
 
-__all__ = ["SqlModelUnitOfWork", "InMemoryMessageBus"]
+__all__ = ["InMemoryMessageBus"]
