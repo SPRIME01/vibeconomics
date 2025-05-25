@@ -131,5 +131,3 @@ Based on our new project structure:
 - app.main (FastAPI app) is now app.entrypoints.fastapi_app
 - app.api.deps is now app.entrypoints.api.deps
 - app.api.routes... are now app.entrypoints.api.routes...
-
-

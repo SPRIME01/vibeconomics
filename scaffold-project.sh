@@ -237,4 +237,3 @@ echo "2. Activate it: source venv/bin/activate (or venv\\Scripts\\activate on Wi
 echo "3. Install requirements: pip install -r requirements.txt"
 echo "4. Copy .env.example to .env and fill in your API keys."
 echo "5. Run tests: pytest"
-
