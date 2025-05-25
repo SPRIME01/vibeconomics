@@ -1,10 +1,11 @@
-from typing import List, TypeVar, Generic, NewType
-from pydantic import BaseModel, Field
-import abc
 import uuid
+from typing import NewType, TypeVar
 
-EventT = TypeVar('EventT') # Generic type for events
-AggregateId = NewType('AggregateId', uuid.UUID)
+from pydantic import BaseModel, Field, PrivateAttr
+
+EventT = TypeVar("EventT")  # Generic type for events
+AggregateId = NewType("AggregateId", uuid.UUID)
+
 
 class DomainEvent(BaseModel):
     """
@@ -13,53 +14,43 @@ class DomainEvent(BaseModel):
     Attributes:
         event_id: The unique identifier for the event.
     """
+
     event_id: uuid.UUID = Field(default_factory=uuid.uuid4)
     # timestamp: datetime = Field(default_factory=datetime.utcnow) # Consider adding later
 
-class AggregateRoot(Generic[EventT], abc.ABC):
+
+class AggregateRoot(BaseModel):
     """
     Base class for aggregate roots in the domain model.
 
-    Attributes:
-        id: The unique identifier of the aggregate.
-        version: The version number of the aggregate for optimistic concurrency control.
+    Provides event management functionality and ensures each aggregate
+    has a unique identifier.
     """
-    id: AggregateId
-    version: int = Field(default=0) # For optimistic concurrency control
 
-    def __init__(self, id: AggregateId) -> None:
-        """
-        Initializes the AggregateRoot.
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    _events: list[DomainEvent] = PrivateAttr(default_factory=list[DomainEvent])
 
-        Args:
-            id: The unique identifier of the aggregate.
+    def add_event(self, event: DomainEvent) -> None:
         """
-        self.id = id
-        self._events: List[EventT] = []
-
-    @property
-    def events(self) -> List[EventT]:
-        """
-        Returns the list of domain events recorded by this aggregate.
-        """
-        return self._events
-
-    def add_event(self, event: EventT) -> None:
-        """
-        Adds a domain event to the aggregate.
+        Add a domain event to the aggregate's event list.
 
         Args:
-            event: The domain event to add.
+            event: The domain event to add
         """
         self._events.append(event)
-        # Optionally, immediately publish events or handle them here if not using a separate bus
 
-    def clear_events(self) -> None:
+    def pull_events(self) -> list[DomainEvent]:
         """
-        Clears all recorded domain events from the aggregate.
-        """
-        self._events = []
+        Return all stored events and clear the internal list.
 
-    # Pydantic compatibility if needed for serialization
-    # class Config:
-    #     arbitrary_types_allowed = True
+        Returns:
+            List of domain events that were stored
+        """
+        events = self._events.copy()
+        self._events.clear()
+        return events
+
+    class Config:
+        """Pydantic configuration to allow arbitrary field types."""
+
+        arbitrary_types_allowed = True
