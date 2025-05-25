@@ -1,7 +1,7 @@
 from typing import List, Optional 
 from app.adapters.mem0_adapter import AbstractMemoryRepository 
 from app.domain.memory.models import MemoryQueryResult, MemorySearchResultItem, MemoryQuery 
-from app.service_layer.queries.memory import SearchMemoryQuery 
+from app.service_layer.queries.memory import SearchMemoryQuery # Uncommented
 
 class SearchMemoryQueryHandler:
     """Handles the SearchMemoryQuery."""
@@ -15,7 +15,7 @@ class SearchMemoryQueryHandler:
         """
         self.memory_repo = memory_repo
 
-    async def handle(self, query: SearchMemoryQuery) -> MemoryQueryResult: 
+    async def handle(self, query: SearchMemoryQuery) -> MemoryQueryResult: # Restored type hint and return type
         """
         Processes the SearchMemoryQuery.
         1. Constructs a domain MemoryQuery from the application SearchMemoryQuery DTO.

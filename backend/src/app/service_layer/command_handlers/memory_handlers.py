@@ -4,7 +4,7 @@ from app.service_layer.message_bus import AbstractMessageBus
 from app.adapters.mem0_adapter import AbstractMemoryRepository
 from app.domain.memory.models import MemoryItem, MemoryId, MemoryWriteRequest # Added MemoryWriteRequest
 from app.domain.memory.events import MemoryStoredEvent
-from app.service_layer.commands.memory import StoreMemoryCommand
+from app.service_layer.commands.memory import StoreMemoryCommand # Uncommented
 from app.core.base_aggregate import AggregateId, DomainEvent # Added DomainEvent for AbstractMessageBus type hint
 
 import uuid
@@ -20,11 +20,11 @@ class StoreMemoryCommandHandler:
         self.message_bus = message_bus
         self.memory_repo = memory_repo
 
-    async def handle(self, command: StoreMemoryCommand) -> Optional[MemoryId]:
+    async def handle(self, command: StoreMemoryCommand) -> Optional[MemoryId]: # Restored type hint
         external_memory_id: Optional[str] = None
         internal_memory_id: Optional[MemoryId] = None
 
-        with self.uow:
+        with self.uow: # Assuming self.uow handles commit/rollback
             write_request = MemoryWriteRequest(
                 user_id=command.user_id,
                 text_content=command.text_content,
@@ -33,10 +33,11 @@ class StoreMemoryCommandHandler:
             external_memory_id = self.memory_repo.add(write_request)
 
             if not external_memory_id:
+                # self.uow.rollback() # Or handle error appropriately
                 return None
 
             # Ensure AggregateId is treated as uuid.UUID for MemoryId
-            memory_item_aggregate_id = MemoryId(AggregateId(uuid.uuid4()))
+            memory_item_aggregate_id = MemoryId(AggregateId(uuid.uuid4())) # Create a new UUID for internal tracking
             internal_memory_id = memory_item_aggregate_id
 
             preview_length = 50
@@ -47,7 +48,8 @@ class StoreMemoryCommandHandler:
                 memory_id=internal_memory_id,
                 user_id=command.user_id,
                 text_content_preview=text_preview,
-                external_id=external_memory_id
+                external_id=external_memory_id # Store the ID from the external mem0 service
             )
-            self.message_bus.publish(event)
+            self.message_bus.publish(event) # Assuming publish handles events within the UoW
+            # self.uow.commit() # Or handled by the context manager
         return internal_memory_id
