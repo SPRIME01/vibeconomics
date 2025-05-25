@@ -23,6 +23,7 @@ class ConcreteUnitOfWork:
         self.repositories: dict[str, Any] = {}
         self._committed = False
         self._rolled_back = False
+        self._events: list[Any] = []
 
     async def __aenter__(self) -> "ConcreteUnitOfWork":
         return self
@@ -37,15 +38,32 @@ class ConcreteUnitOfWork:
     async def rollback(self) -> None:
         self._rolled_back = True
 
+    async def collect_new_events(self) -> list[Any]:
+        """Collect and return any new events."""
+        events = self._events.copy()
+        self._events.clear()
+        return events
+
 
 class ConcreteMessageBus:
     """Concrete implementation for testing AbstractMessageBus protocol."""
 
     def __init__(self) -> None:
         self.published_events: list[SampleDomainEvent] = []
+        self.handlers: dict[type, list[Any]] = {}
 
     async def publish(self, event: SampleDomainEvent) -> None:
         self.published_events.append(event)
+
+    async def publish_batch(self, events: list[SampleDomainEvent]) -> None:
+        self.published_events.extend(events)
+
+    def register_handler(
+        self, event_type: type[SampleDomainEvent], handler: Any
+    ) -> None:
+        if event_type not in self.handlers:
+            self.handlers[event_type] = []
+        self.handlers[event_type].append(handler)
 
 
 class TestAbstractUnitOfWork:
@@ -75,7 +93,13 @@ class TestAbstractUnitOfWork:
         from app.service_layer.unit_of_work import AbstractUnitOfWork
 
         # Check that protocol defines expected methods
-        required_methods = ["__aenter__", "__aexit__", "commit", "rollback"]
+        required_methods = [
+            "__aenter__",
+            "__aexit__",
+            "commit",
+            "rollback",
+            "collect_new_events",
+        ]
         for method in required_methods:
             assert hasattr(AbstractUnitOfWork, method), (
                 f"AbstractUnitOfWork should define {method}"
@@ -143,6 +167,19 @@ class TestAbstractUnitOfWork:
         uow.repositories["test_repo"] = mock_repo
         assert uow.repositories["test_repo"] is mock_repo
 
+    @pytest.mark.asyncio
+    async def test_concrete_implementation_collect_events(self) -> None:
+        """Test that concrete implementation can collect events."""
+        uow = ConcreteUnitOfWork()
+
+        # Add some mock events
+        uow._events.extend(["event1", "event2"])
+
+        events = await uow.collect_new_events()
+
+        assert events == ["event1", "event2"]
+        assert len(uow._events) == 0  # Events should be cleared after collection
+
 
 class TestAbstractMessageBus:
     """Test suite for AbstractMessageBus protocol interface."""
@@ -185,6 +222,17 @@ class TestAbstractMessageBus:
             # This test will be more meaningful once the actual protocol is implemented
             # For now, we ensure the method exists
             pass
+
+    def test_abstract_message_bus_has_required_methods(self) -> None:
+        """Test that AbstractMessageBus defines all required methods."""
+        from app.service_layer.message_bus import AbstractMessageBus
+
+        # Check that protocol defines expected methods
+        required_methods = ["publish", "publish_batch", "register_handler"]
+        for method in required_methods:
+            assert hasattr(AbstractMessageBus, method), (
+                f"AbstractMessageBus should define {method}"
+            )
 
     def test_concrete_implementation_satisfies_protocol(self) -> None:
         """Test that a concrete implementation satisfies the AbstractMessageBus protocol."""
@@ -231,6 +279,36 @@ class TestAbstractMessageBus:
         assert len(bus.published_events) == 3
         for i, published_event in enumerate(bus.published_events):
             assert published_event.data["index"] == i
+
+    @pytest.mark.asyncio
+    async def test_concrete_implementation_publish_batch(self) -> None:
+        """Test that concrete implementation can publish multiple events."""
+        bus = ConcreteMessageBus()
+
+        events = [
+            SampleDomainEvent(
+                event_id=uuid4(), event_type=f"test_event_{i}", data={"index": i}
+            )
+            for i in range(3)
+        ]
+
+        await bus.publish_batch(events)
+
+        assert len(bus.published_events) == 3
+        for i, published_event in enumerate(bus.published_events):
+            assert published_event.data["index"] == i
+
+    def test_concrete_implementation_register_handler(self) -> None:
+        """Test that concrete implementation can register handlers."""
+        bus = ConcreteMessageBus()
+
+        def sample_handler(event: SampleDomainEvent) -> None:
+            pass
+
+        bus.register_handler(SampleDomainEvent, sample_handler)
+
+        assert SampleDomainEvent in bus.handlers
+        assert sample_handler in bus.handlers[SampleDomainEvent]
 
 
 class TestProtocolIntegration:
