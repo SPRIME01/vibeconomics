@@ -9,8 +9,8 @@ from pydantic import ValidationError
 from sqlmodel import Session
 
 from app import security
-from app.config import settings
 from app.adapters.orm import engine
+from app.config import settings
 from app.domain.user import User
 from app.entrypoints.schemas import TokenPayload
 

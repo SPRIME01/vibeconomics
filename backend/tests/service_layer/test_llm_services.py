@@ -1,46 +1,54 @@
-import pytest
-from typing import Type, Any
-from pydantic import BaseModel, Field
+from typing import Any
 from unittest.mock import MagicMock
 
-from app.service_layer.llm_services import AbstractLLMService, DSPyLLMService, PydanticModelT
-import dspy # Import dspy for Prediction and settings
+import dspy  # Import dspy for Prediction and settings
+import pytest
+from pydantic import BaseModel, Field
+
+from app.service_layer.llm_services import DSPyLLMService
+
 
 # Define the Pydantic model as specified in the issue
 class SampleStructuredOutput(BaseModel):
     answer: str = Field(...)
     confidence: float = Field(..., ge=0.0, le=1.0)
 
+
 # Mock DSPy LM client for testing
 @pytest.fixture
-def mock_dspy_lm_client() -> MagicMock: # self removed
+def mock_dspy_lm_client() -> MagicMock:  # self removed
     client = MagicMock()
+
     # Mock a basic request method for the get_response placeholder
-    def mock_basic_request(prompt: str, **kwargs: Any) -> str:
+    def mock_basic_request(prompt: str, **_kwargs: Any) -> str:
         return f"Mocked LLM response to: {prompt}"
+
     client.basic_request = mock_basic_request
-    
+
     # For dspy.predict usage in DSPyLLMService's get_response:
     # This mock will be configured further in the test itself.
     return client
 
+
 @pytest.fixture
-def dspy_llm_service(mock_dspy_lm_client: MagicMock) -> DSPyLLMService[BaseModel]: # self removed
+def dspy_llm_service(
+    mock_dspy_lm_client: MagicMock,
+) -> DSPyLLMService[BaseModel]:  # self removed
     return DSPyLLMService[BaseModel](llm_client=mock_dspy_lm_client)
 
+
 def test_dspy_llm_service_get_response(
-    dspy_llm_service: DSPyLLMService[BaseModel],
-    mock_dspy_lm_client: MagicMock
+    dspy_llm_service: DSPyLLMService[BaseModel], mock_dspy_lm_client: MagicMock
 ) -> None:
     """Test the basic get_response method of DSPyLLMService."""
     prompt = "Hello, LLM!"
-    
+
     # Configure DSPy settings to use the mock client for this test context
     # This is important if dspy.predict() is used without an explicit lm argument
     # and relies on the global setting.
-    original_lm = dspy.settings.lm # Store original to restore later
+    original_lm = dspy.settings.lm  # Store original to restore later
     dspy.settings.configure(lm=mock_dspy_lm_client)
-    
+
     # The DSPyLLMService's get_response uses a dspy.Predict(BasicQA)
     # which eventually calls the configured LM.
     # The LM (mock_dspy_lm_client in this case) should return a list of dspy.Prediction objects
@@ -48,7 +56,7 @@ def test_dspy_llm_service_get_response(
     # For BasicQA (question -> answer), a list of dicts like [{'answer': '...'}, ...] or
     # a dspy.Prediction object with an 'answer' attribute is expected by some DSPy internals.
     # Let's make the mock client return a list containing a dspy.Prediction object.
-    
+
     # Create a mock dspy.Prediction object
     # Note: dspy.Prediction is a simple class, but dspy.Completions (plural) is often returned by LMs
     # For dspy.Predict(Signature), the LM's __call__ method is expected to return a list of
@@ -65,12 +73,12 @@ def test_dspy_llm_service_get_response(
     # A simple way is to make the mock client's `__call__` or `return_value` (if it's a general mock)
     # provide this structure. Since `dspy.predict` wraps the call, the `mock_dspy_lm_client` itself
     # is the LM that `dspy.predict` will use.
-    
+
     # When `dspy.predict(Signature)(input=prompt)` is called, and `self.llm_client` is the LM,
     # `self.llm_client.__call__` will be invoked.
     # It should return a list of `dspy.Example` or `dspy.Prediction` like objects or dicts.
     # For a signature like "input -> output", it needs to provide an "output" field.
-    
+
     # Let's mock the return value of the llm_client when it's called by DSPy's machinery.
     # This simulates the LM generating a response.
     # dspy.predict expects the LM to return a list of completions.
@@ -81,20 +89,19 @@ def test_dspy_llm_service_get_response(
 
     response_text = dspy_llm_service.get_response(prompt)
     assert response_text == f"Mocked LLM response to: {prompt}"
-    
+
     # Restore original DSPy settings
     dspy.settings.configure(lm=original_lm)
 
 
 def test_dspy_llm_service_generates_structured_output(
-    dspy_llm_service: DSPyLLMService[SampleStructuredOutput], # Specify ModelT
+    dspy_llm_service: DSPyLLMService[SampleStructuredOutput],  # Specify ModelT
 ) -> None:
     """Test DSPy service generates output conforming to a Pydantic model via Outlines (mocked)."""
     question: str = "What is 2 + 2?"
-    
+
     response = dspy_llm_service.get_structured_response(
-        prompt=question,
-        output_model=SampleStructuredOutput
+        prompt=question, output_model=SampleStructuredOutput
     )
     assert isinstance(response, SampleStructuredOutput)
     assert response.answer == "4"
@@ -102,8 +109,10 @@ def test_dspy_llm_service_generates_structured_output(
     assert 0.0 <= response.confidence <= 1.0
     assert response.confidence == 0.99
 
+
 def test_dspy_llm_service_structured_output_handles_generic_mock() -> None:
     """Test the generic mock data generation for structured output."""
+
     class AnotherModel(BaseModel):
         name: str
         value: int
@@ -112,8 +121,7 @@ def test_dspy_llm_service_structured_output_handles_generic_mock() -> None:
 
     service = DSPyLLMService[AnotherModel](llm_client=MagicMock())
     response = service.get_structured_response(
-        prompt="Generate something for AnotherModel",
-        output_model=AnotherModel
+        prompt="Generate something for AnotherModel", output_model=AnotherModel
     )
     assert isinstance(response, AnotherModel)
     assert response.name == "mock string"

@@ -1,8 +1,8 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app.config import settings
 from app.adapters.orm import User
+from app.config import settings
 
 
 def test_create_user(client: TestClient, db: Session) -> None:

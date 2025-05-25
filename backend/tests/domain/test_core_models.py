@@ -1,6 +1,5 @@
-import pytest
 from uuid import UUID, uuid4
-from typing import List
+
 from pydantic import BaseModel
 
 from app.core.base_aggregate import AggregateRoot, DomainEvent
@@ -8,12 +7,14 @@ from app.core.base_aggregate import AggregateRoot, DomainEvent
 
 class TestDomainEvent(DomainEvent):
     """Test domain event for testing purposes."""
+
     event_type: str
     data: str
 
 
 class TestAggregate(AggregateRoot):
     """Test aggregate for testing purposes."""
+
     name: str
 
     def do_something(self, data: str) -> None:

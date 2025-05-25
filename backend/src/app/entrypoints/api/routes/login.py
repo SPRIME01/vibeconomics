@@ -6,12 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app import crud
-from app.entrypoints.api.deps import CurrentUser, SessionDep, get_current_active_superuser  # Adjusted import
-from app import security
+from app import crud, security
 from app.config import settings
-from app.security import get_password_hash
+from app.entrypoints.api.deps import (  # Adjusted import
+    CurrentUser,
+    get_current_active_superuser,
+)
 from app.entrypoints.schemas import Message, NewPassword, Token, UserPublic
+from app.security import get_password_hash
 from app.utils import (
     generate_password_reset_token,
     generate_reset_password_email,
@@ -25,7 +27,7 @@ router = APIRouter(tags=["login"])
 @router.post("/login/access-token")
 def login_access_token(
     session: Any,  # Changed SessionDep to Any
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
     """
     OAuth2 compatible token login, get an access token for future requests
@@ -78,7 +80,9 @@ def recover_password(email: str, session: Any) -> Message:  # Changed SessionDep
 
 
 @router.post("/reset-password/")
-def reset_password(session: Any, body: NewPassword) -> Message:  # Changed SessionDep to Any
+def reset_password(
+    session: Any, body: NewPassword
+) -> Message:  # Changed SessionDep to Any
     """
     Reset password
     """
@@ -105,7 +109,9 @@ def reset_password(session: Any, body: NewPassword) -> Message:  # Changed Sessi
     dependencies=[Depends(get_current_active_superuser)],
     response_class=HTMLResponse,
 )
-def recover_password_html_content(email: str, session: Any) -> Any:  # Changed SessionDep to Any
+def recover_password_html_content(
+    email: str, session: Any
+) -> Any:  # Changed SessionDep to Any
     """
     HTML Content for Password Recovery
     """

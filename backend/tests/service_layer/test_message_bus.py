@@ -1,26 +1,32 @@
-import pytest
+import logging  # Required for caplog to work with logger in message_bus
 from unittest.mock import MagicMock
-from typing import Type
-import logging # Required for caplog to work with logger in message_bus
 
-from app.core.base_aggregate import DomainEvent
-from app.service_layer.message_bus import AbstractMessageBus, EventT # EventT might not be strictly needed for test
-from app.adapters.message_bus_inmemory import InMemoryMessageBus # Test this concrete impl
+import pytest
 
 # Import LogCaptureFixture for caplog type hint
 from _pytest.logging import LogCaptureFixture
+
+from app.adapters.message_bus_inmemory import (
+    InMemoryMessageBus,  # Test this concrete impl
+)
+from app.core.base_aggregate import DomainEvent
+from app.service_layer.message_bus import (
+    AbstractMessageBus,  # EventT might not be strictly needed for test
+)
 
 
 class EventA(DomainEvent):
     value: int
 
+
 class EventB(DomainEvent):
     message: str
+
 
 def test_inmemory_message_bus_subscribe_and_publish() -> None:
     """Test that handlers are called for subscribed events."""
     bus: AbstractMessageBus[DomainEvent] = InMemoryMessageBus()
-    
+
     handler_a1_mock = MagicMock()
     handler_a2_mock = MagicMock()
     handler_b_mock = MagicMock()
@@ -45,6 +51,7 @@ def test_inmemory_message_bus_subscribe_and_publish() -> None:
     handler_a2_mock.assert_not_called()
     handler_b_mock.assert_called_once_with(event_b_instance)
 
+
 def test_inmemory_message_bus_no_handler() -> None:
     """Test publishing an event with no subscribers does not error."""
     bus: AbstractMessageBus[DomainEvent] = InMemoryMessageBus()
@@ -54,10 +61,13 @@ def test_inmemory_message_bus_no_handler() -> None:
     except Exception as e:
         pytest.fail(f"Publishing event with no handlers raised an exception: {e}")
 
-def test_inmemory_message_bus_handler_exception_does_not_stop_others(caplog: LogCaptureFixture) -> None: # Added type hint
+
+def test_inmemory_message_bus_handler_exception_does_not_stop_others(
+    caplog: LogCaptureFixture,
+) -> None:  # Added type hint
     """Test that an exception in one handler doesn't prevent others from running."""
     bus: AbstractMessageBus[DomainEvent] = InMemoryMessageBus()
-    
+
     # Set the log level for the logger used in InMemoryMessageBus to ensure messages are captured
     # This is important if the default level for this logger is higher than DEBUG or INFO
     # logger = logging.getLogger("app.adapters.message_bus_inmemory") # Get the specific logger
@@ -67,8 +77,11 @@ def test_inmemory_message_bus_handler_exception_does_not_stop_others(caplog: Log
     # Using caplog.at_level to temporarily set log level for the context of this test
     with caplog.at_level(logging.DEBUG, logger="app.adapters.message_bus_inmemory"):
 
-        def faulty_handler(event: EventA) -> None:
+        def faulty_handler(_event: EventA) -> None:
             raise ValueError("Handler Error")
+
+        def good_handler(event: EventA) -> None:
+            pass  # This handler works fine
 
         handler_ok_mock = MagicMock()
 
@@ -81,6 +94,6 @@ def test_inmemory_message_bus_handler_exception_does_not_stop_others(caplog: Log
         handler_ok_mock.assert_called_once_with(event_a_instance)
         assert "Exception handling event" in caplog.text
         assert "ValueError: Handler Error" in caplog.text
-    
+
     # # Restore original log level if changed
     # logger.setLevel(original_level)

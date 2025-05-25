@@ -159,6 +159,7 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "bcrypt" },
+    { name = "dspy" },
     { name = "dspy-ai" },
     { name = "email-validator" },
     { name = "emails" },
@@ -189,6 +190,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.16.1,<2.0.0" },
     { name = "bcrypt", specifier = "==4.3.0" },
+    { name = "dspy", specifier = ">=2.6.24" },
     { name = "dspy-ai", specifier = ">=2.4.3,<3.0.0" },
     { name = "email-validator", specifier = ">=2.1.0.post1,<3.0.0.0" },
     { name = "emails", specifier = ">=0.6,<1.0" },

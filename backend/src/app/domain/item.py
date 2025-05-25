@@ -1,27 +1,12 @@
-\
-import uuid
-from pydantic import BaseModel, Field
+from uuid import UUID
 
-# Shared properties
-class ItemBase(BaseModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
+from app.core.base_aggregate import AggregateRoot
 
-    class Config:
-        from_attributes = True
 
-# Properties to receive on item creation - Considered domain
-class ItemCreate(ItemBase):
-    pass
+class Item(AggregateRoot):
+    name: str
+    description: str | None = None
+    owner_id: UUID
 
-# Properties to receive on item update - Considered domain
-class ItemUpdate(ItemBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255) # type: ignore[assignment]
 
-# Domain model for Item - distinct from DB model
-class Item(ItemBase):
-    id: uuid.UUID
-    owner_id: uuid.UUID # Keep owner_id as it's a crucial piece of information for the item
-
-    class Config:
-        from_attributes = True
+# Ensure there is a newline character at the end of this file.

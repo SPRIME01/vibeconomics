@@ -1,16 +1,16 @@
-from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 import uuid  # Added import for uuid
+from typing import Any
 
-from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 from sqlalchemy import select  # Added import for select
+from sqlalchemy.orm import Session
 
-from app.adapters.orm import User, Item  # Corrected: ORM models for DB operations
+from app.adapters.orm import Item, User  # Corrected: ORM models for DB operations
 from app.domain.user import UserCreate, UserUpdate  # Corrected import paths
 from app.entrypoints.schemas import ItemCreateInput
-from app.security import get_password_hash, verify_password  # Corrected: Security utilities
-from app.config import settings  # Existing import, confirmed correct
+from app.security import (  # Corrected: Security utilities
+    get_password_hash,
+    verify_password,
+)
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -52,7 +52,9 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
     return db_user
 
 
-def create_item(*, session: Session, item_in: ItemCreateInput, owner_id: uuid.UUID) -> Item:
+def create_item(
+    *, session: Session, item_in: ItemCreateInput, owner_id: uuid.UUID
+) -> Item:
     db_item = Item.model_validate(item_in, update={"owner_id": owner_id})
     session.add(db_item)
     session.commit()

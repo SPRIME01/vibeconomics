@@ -1,12 +1,11 @@
-from typing import List, Dict, Any, Optional, Type, Callable, AsyncGenerator, Protocol
 from uuid import UUID
-from pydantic import BaseModel, Field
-from abc import ABC, abstractmethod
-from app.core.base_aggregate import DomainEvent # Adjusted import
+
+from pydantic import BaseModel
+
 
 class ProcessUserChatMessageCommand(BaseModel):
-    session_id: Optional[UUID] = None
-    user_id: Optional[str] = None
+    session_id: UUID | None = None
+    user_id: str | None = None
     message_content: str
-    model_name: Optional[str] = None
+    model_name: str | None = None
     # Add other relevant fields

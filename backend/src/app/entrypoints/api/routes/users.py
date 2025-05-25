@@ -5,13 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col, delete, func, select
 
 from app import crud
+from app.adapters.orm import Item, User
+from app.config import settings
+from app.domain.user import UserCreate, UserUpdate
 from app.entrypoints.api.deps import (
     CurrentUser,
     SessionDep,
     get_current_active_superuser,
 )
-from app.config import settings
-from app.security import get_password_hash, verify_password
 from app.entrypoints.schemas import (
     Message,
     UpdatePasswordInput,
@@ -20,9 +21,8 @@ from app.entrypoints.schemas import (
     UsersPublic,
     UserUpdateMeInput,
 )
-from app.adapters.orm import User, Item
+from app.security import get_password_hash, verify_password
 from app.utils import generate_new_account_email, send_email
-from app.domain.user import UserCreate, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
 

@@ -11,7 +11,7 @@ from jwt.exceptions import InvalidTokenError
 
 # TODO: Refactor security functions to an appropriate layer (e.g., app.service_layer or app.domain)
 from app.config import settings
-from app.security import create_access_token, ALGORITHM
+from app.security import ALGORITHM
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -116,9 +116,7 @@ def generate_password_reset_token(email: str) -> str:
 
 def verify_password_reset_token(token: str) -> str | None:
     try:
-        decoded_token = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[ALGORITHM]
-        )
+        decoded_token = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         return str(decoded_token["sub"])
     except InvalidTokenError:
         return None

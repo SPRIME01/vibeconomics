@@ -1,6 +1,14 @@
 import uuid
-from pydantic import EmailStr # Required for User table
-from sqlmodel import Field, Relationship, SQLModel, Session, create_engine, select # Added create_engine, select, Session
+
+from pydantic import EmailStr  # Required for User table
+from sqlmodel import (  # Added create_engine, select, Session
+    Field,
+    Relationship,
+    Session,
+    SQLModel,
+    create_engine,
+    select,
+)
 
 # Import config settings
 from app.config import settings
@@ -13,7 +21,6 @@ from app.config import settings
 # Or crud.create_user needs to be available/refactored.
 # For now, let's assume a UserCreate schema will be available or adapted.
 # We will need to address the UserCreate and crud.create_user dependency for init_db carefully.
-from app.entrypoints.schemas import UserCreateInput # Using an input DTO
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 
@@ -21,6 +28,7 @@ engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
 # otherwise, SQLModel might fail to initialize relationships properly
 # For more details: https://github.com/fastapi/full-stack-fastapi-template/issues/28
 # SQLModel.metadata.create_all(engine) # This should be handled by Alembic
+
 
 def init_db(session: Session) -> None:
     # Tables should be created with Alembic migrations
@@ -56,19 +64,20 @@ def init_db(session: Session) -> None:
 
         # Temporary direct object creation for ORM User, this bypasses hashing and other logic in crud.create_user
         # THIS IS NOT PRODUCTION READY and needs to be replaced by a proper service call.
-        from app.security import get_password_hash # Temporary import for hashing
+        from app.security import get_password_hash  # Temporary import for hashing
 
         db_user = User(
             email=settings.FIRST_SUPERUSER,
             hashed_password=get_password_hash(settings.FIRST_SUPERUSER_PASSWORD),
             is_active=True,
             is_superuser=True,
-            full_name="Super User" # Default full_name
+            full_name="Super User",  # Default full_name
         )
         session.add(db_user)
         session.commit()
         session.refresh(db_user)
         print(f"Superuser {settings.FIRST_SUPERUSER} created.")
+
 
 # Database model, database table inferred from class name
 class User(SQLModel, table=True):
@@ -80,11 +89,12 @@ class User(SQLModel, table=True):
     hashed_password: str
     items: list["Item"] = Relationship(back_populates="owner", cascade_delete=True)
 
+
 # Database model, database table inferred from class name
 class Item(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     title: str = Field(max_length=255)
-    description: str | None = Field(default=None, max_length=255) # Added from ItemBase
+    description: str | None = Field(default=None, max_length=255)  # Added from ItemBase
     owner_id: uuid.UUID = Field(foreign_key="user.id", nullable=False)
     # owner: User | None = Relationship(back_populates="items") # Original had ondelete=\"CASCADE\" on owner_id, which is good.
     # SQLModel handles cascade delete via the foreign_key constraint typically, or it can be specified in the relationship.

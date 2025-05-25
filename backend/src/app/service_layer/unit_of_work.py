@@ -1,14 +1,16 @@
 import abc
-from typing import Any, Type
+from typing import Any
 
 # Forward declare repository types if they are abstract, or use Any for now
 # from app.adapters.repositories import AbstractSomeRepository # Example
+
 
 class AbstractUnitOfWork(abc.ABC):
     """
     An abstract base class for implementing the Unit of Work pattern.
     It manages transactions and coordinates changes across repositories.
     """
+
     # repositories: Dict[str, Any] # Store instantiated repositories
 
     def __enter__(self) -> "AbstractUnitOfWork":

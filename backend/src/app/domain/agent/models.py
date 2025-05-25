@@ -1,16 +1,19 @@
-from typing import List, Optional, Dict, Any
-from uuid import UUID, uuid4
+from uuid import UUID
+
 from pydantic import BaseModel, Field
-from app.core.base_aggregate import AggregateRoot, DomainEvent
+
+from app.core.base_aggregate import AggregateRoot
+
 
 class ChatMessage(BaseModel):
-    role: str # "user", "assistant", "system"
+    role: str  # "user", "assistant", "system"
     content: str
+
 
 class Conversation(AggregateRoot[UUID]):
     # id is inherited from AggregateRoot
-    user_id: Optional[str] = None
-    messages: List[ChatMessage] = Field(default_factory=list)
+    user_id: str | None = None
+    messages: list[ChatMessage] = Field(default_factory=list)
     # created_at: datetime = Field(default_factory=datetime.utcnow)
     # last_updated_at: datetime = Field(default_factory=datetime.utcnow)
 

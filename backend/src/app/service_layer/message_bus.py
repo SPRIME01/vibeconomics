@@ -1,8 +1,11 @@
 import abc
-from typing import List, Type, Callable, Dict, TypeVar, Generic
-from app.core.base_aggregate import DomainEvent # Adjusted import
+from collections.abc import Callable
+from typing import Generic, TypeVar
+
+from app.core.base_aggregate import DomainEvent  # Adjusted import
 
 EventT = TypeVar("EventT", bound=DomainEvent)
+
 
 class AbstractMessageBus(abc.ABC, Generic[EventT]):
     """
@@ -13,6 +16,7 @@ class AbstractMessageBus(abc.ABC, Generic[EventT]):
                        It is recommended to initialize this in concrete implementations.
                        Example: self.subscriptions = defaultdict(list)
     """
+
     # subscriptions: Dict[Type[EventT], List[Callable[[EventT], None]]]
 
     @abc.abstractmethod
@@ -26,7 +30,9 @@ class AbstractMessageBus(abc.ABC, Generic[EventT]):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def subscribe(self, event_type: Type[EventT], handler: Callable[[EventT], None]) -> None:
+    def subscribe(
+        self, event_type: type[EventT], handler: Callable[[EventT], None]
+    ) -> None:
         """
         Subscribes a handler to a specific event type.
 

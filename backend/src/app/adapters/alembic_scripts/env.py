@@ -1,4 +1,3 @@
-import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -19,7 +18,7 @@ fileConfig(config.config_file_name)
 # target_metadata = None
 
 from app.adapters.orm import SQLModel  # noqa
-from app.config import settings # noqa
+from app.config import settings  # noqa
 
 target_metadata = SQLModel.metadata
 
