@@ -1,4 +1,3 @@
-\
 import uuid
 from pydantic import EmailStr # Required for User table
 from sqlmodel import Field, Relationship, SQLModel, Session, create_engine, select # Added create_engine, select, Session
@@ -91,4 +90,3 @@ class Item(SQLModel, table=True):
     # SQLModel handles cascade delete via the foreign_key constraint typically, or it can be specified in the relationship.
     # For now, relying on DB-level cascade via foreign_key. If issues arise, can add cascade_delete=True to Relationship.
     owner: User = Relationship(back_populates="items")
-

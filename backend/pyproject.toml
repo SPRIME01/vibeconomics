@@ -61,3 +61,14 @@ ignore = [
 [tool.ruff.lint.pyupgrade]
 # Preserve types, even if a file imports `from __future__ import annotations`.
 keep-runtime-typing = true
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "src/app/entrypoints/api/routes",
+    "src/app/entrypoints/fastapi_app.py",
+    "src/app/entrypoints/api/deps.py",
+    "src/app/backend_pre_start.py",
+    "src/app/config.py",
+    "src/app/crud.py",
+]

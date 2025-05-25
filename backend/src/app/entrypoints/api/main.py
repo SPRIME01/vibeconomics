@@ -1,15 +1,65 @@
-# filepath: c:\Users\sprim\FocusAreas\Projects\Dev\vibeconomics\backend\src\app\api\main.py
-from fastapi import APIRouter
+from fastapi import FastAPI, Depends
+from typing import Dict, Any
 
-from app.entrypoints.api.routes import items, login, private, users, utils # Adjusted import
-from app.config import settings
+from app.service_layer.unit_of_work import AbstractUnitOfWork
+from app.service_layer.message_bus import AbstractMessageBus # Removed EventT
+from app.core.base_aggregate import DomainEvent # For type hint
+from .dependencies import get_uow, get_message_bus, UoWDep, MessageBusDep
 
-api_router = APIRouter()
-api_router.include_router(login.router)
-api_router.include_router(users.router)
-api_router.include_router(utils.router)
-api_router.include_router(items.router)
+app = FastAPI(title="Vibeconomics Agentic Framework")
+
+# Example Event for testing
+class TestDIEvent(DomainEvent):
+    """A sample domain event for testing DI."""
+    message: str
+
+@app.get("/")
+async def read_root() -> Dict[str, str]:
+    """Root endpoint for the application."""
+    return {"message": "Welcome to Vibeconomics Agentic Framework"}
+
+@app.post("/test-di-uow")
+async def test_di_uow(uow: UoWDep) -> Dict[str, bool]:
+    """
+    Endpoint to test Unit of Work dependency injection.
+    
+    Verifies that the injected 'uow' is an instance of AbstractUnitOfWork.
+    """
+    is_uow_instance = isinstance(uow, AbstractUnitOfWork)
+    # In a real scenario, you'd use the uow:
+    # with uow:
+    #    uow.some_repository.add(...)
+    #    uow.commit()
+    # The 'committed' attribute check is illustrative; SqlModelUnitOfWork
+    # sets 'committed' only if its context manager methods are fully used.
+    # Here, we mainly test if the DI provided an object of the correct abstract type.
+    return {"is_uow_instance": is_uow_instance, "committed": getattr(uow, 'committed', False)}
 
 
-if settings.ENVIRONMENT == "local":
-    api_router.include_router(private.router)
+@app.post("/test-di-message-bus")
+async def test_di_message_bus(bus: MessageBusDep) -> Dict[str, bool]:
+    """
+    Endpoint to test MessageBus dependency injection.
+    
+    Verifies that the injected 'bus' is an instance of AbstractMessageBus.
+    """
+    is_bus_instance = isinstance(bus, AbstractMessageBus)
+    # In a real scenario, you'd use the bus:
+    # event = TestDIEvent(message="Hello from DI test")
+    # bus.publish(event)
+    return {"is_bus_instance": is_bus_instance}
+
+# Example of using the concrete dependency getters directly if needed
+@app.post("/test-di-concrete-uow")
+async def test_di_concrete_uow(
+    uow: AbstractUnitOfWork = Depends(get_uow)
+) -> Dict[str, bool]:
+    """
+    Endpoint to test direct injection of UoW using the getter.
+    
+    Verifies that the injected 'uow' is an instance of AbstractUnitOfWork.
+    """
+    return {"is_uow_instance": isinstance(uow, AbstractUnitOfWork)}
+
+# If you need to override dependencies for testing, FastAPI supports this.
+# e.g., app.dependency_overrides[get_uow] = lambda: mock_uow

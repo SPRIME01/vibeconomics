@@ -4,7 +4,7 @@ set -e
 set -x
 
 cd backend
-python -c "import app.main; import json; print(json.dumps(app.main.app.openapi()))" > ../openapi.json
+python -c "import src.app.entrypoints.fastapi_app; import json; print(json.dumps(src.app.entrypoints.fastapi_app.app.openapi()))" > ../openapi.json
 cd ..
 mv openapi.json frontend/
 cd frontend

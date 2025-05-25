@@ -1,4 +1,3 @@
-# filepath: c:\Users\sprim\FocusAreas\Projects\Dev\vibeconomics\backend\src\app\api\routes\private.py
 from typing import Any
 
 from fastapi import APIRouter

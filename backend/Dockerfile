@@ -42,4 +42,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Change WORKDIR to the source directory where the 'app' package resides
 WORKDIR /app/src
 
-CMD ["fastapi", "run", "--workers", "4", "app.main:app"]
+CMD ["fastapi", "run", "--workers", "4", "app.entrypoints.fastapi_app:app"]

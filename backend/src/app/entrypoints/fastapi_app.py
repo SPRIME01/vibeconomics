@@ -5,7 +5,6 @@ from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from app.config import settings
-# Adjust import when api_router is moved
 from app.entrypoints.api.main import api_router
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -30,5 +29,4 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
 
-# This will be updated once API routes are moved
 app.include_router(api_router, prefix=settings.API_V1_STR)
