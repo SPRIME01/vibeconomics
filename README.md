@@ -124,16 +124,6 @@ Deployment docs: [deployment.md](./deployment.md).
 
 General development docs: [development.md](./development.md).
 
-## Success Criteria
-
-1. All tests pass with >90% coverage
-2. Complete type checking with mypy
-3. LibreChat integration working with custom DSPy backend
-4. Memory system functional with Mem0
-5. All architectural patterns properly implemented
-6. Clean, maintainable, and well-documented codebase
-7. End-to-end workflows demonstrating agentic capabilities
-
 ## License
 
 The Vibeconomics project is licensed under the terms of the MIT license.
