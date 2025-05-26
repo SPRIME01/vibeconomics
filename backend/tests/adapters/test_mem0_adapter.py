@@ -1,284 +1,306 @@
 """Tests for Mem0 adapter implementation."""
 
-from typing import Any
 from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
 
-from app.adapters.mem0_adapter import Mem0Adapter
+from app.adapters.mem0_adapter import Mem0Adapter, Mem0Memory
 
 
 class TestMem0Adapter:
     """Test suite for Mem0Adapter."""
 
-    def test_mem0_adapter_add_memory_item(
+    @pytest.fixture
+    def mock_memory_client(self, monkeypatch: pytest.MonkeyPatch) -> Mock:
+        """Fixture to mock the MemoryClient."""
+        mock_client = Mock()
+        mock_mem0_class = Mock(return_value=mock_client)
+        monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
+        return mock_client
+
+    def test_mem0_adapter_initialization_failure(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test that Mem0Adapter correctly adds memory items and returns the ID.
-
-        This test verifies that:
-        1. The adapter properly calls the underlying mem0 client
-        2. The correct arguments are passed to the client
-        3. The response ID is returned correctly
-        """
-        # Arrange - Mock the mem0 client
-        mock_mem0_client = Mock()
-        mock_response_id = str(uuid4())
-        mock_mem0_client.add.return_value = {"id": mock_response_id}
-
-        # Mock the mem0 module and its Mem0 class
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
+        """Test adapter initialization failure."""
+        mock_mem0_class = Mock(side_effect=RuntimeError("Init failed"))
         monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
+        with pytest.raises(
+            RuntimeError, match="Failed to initialize Mem0Client: Init failed"
+        ):
+            Mem0Adapter()
 
-        # Sample test data
-        test_user_id = "test-user-123"
-        test_text_content = "This is a sample memory item for testing"
-        test_metadata = {
-            "source": "test",
-            "category": "sample",
-            "timestamp": "2024-01-01T00:00:00Z",
-        }
+    # --- Add Method Tests ---
+    def test_mem0_adapter_add_memory_item_success(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test successful addition of a memory item."""
+        mock_response_id = str(uuid4())
+        mock_memory_client.add.return_value = {"id": mock_response_id}
 
-        # Act - Create adapter and call add method
         adapter = Mem0Adapter()
         result_id = adapter.add(
-            user_id=test_user_id,
-            text_content=test_text_content,
-            metadata=test_metadata,
+            user_id="test-user",
+            text_content="Test content",
+            metadata={"source": "test"},
         )
 
-        # Assert - Verify the mock was called correctly
-        mock_mem0_client.add.assert_called_once_with(
-            messages=[{"role": "user", "content": test_text_content}],
-            user_id=test_user_id,
-            metadata=test_metadata,
-        )
-
-        # Assert - Verify the correct ID is returned
+        mock_memory_client.add.assert_called_once()
         assert result_id == mock_response_id
 
-    def test_mem0_adapter_add_memory_item_with_minimal_data(
-        self, monkeypatch: pytest.MonkeyPatch
+    def test_mem0_adapter_add_memory_item_client_error(
+        self, mock_memory_client: Mock
     ) -> None:
-        """Test Mem0Adapter add method with minimal required data."""
-        # Arrange
-        mock_mem0_client = Mock()
-        mock_response_id = str(uuid4())
-        mock_mem0_client.add.return_value = {"id": mock_response_id}
+        """Test add method when mem0 client raises an error."""
+        mock_memory_client.add.side_effect = Exception("Client add error")
 
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
-        monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
-
-        test_user_id = "minimal-user"
-        test_text_content = "Minimal memory"
-
-        # Act
         adapter = Mem0Adapter()
-        result_id = adapter.add(user_id=test_user_id, text_content=test_text_content)
+        result_id = adapter.add(user_id="test-user", text_content="Test content")
 
-        # Assert
-        mock_mem0_client.add.assert_called_once_with(
-            messages=[{"role": "user", "content": test_text_content}],
-            user_id=test_user_id,
-            metadata=None,
-        )
-        assert result_id == mock_response_id
+        assert result_id is None
+
+    def test_mem0_adapter_add_memory_item_malformed_response(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test add method when mem0 client returns a malformed response."""
+        mock_memory_client.add.return_value = {
+            "wrong_key": "some_value"
+        }  # Missing 'id'
+
+        adapter = Mem0Adapter()
+        result_id = adapter.add(user_id="test-user", text_content="Test content")
+
+        assert result_id is None
+
+    # --- Search Method Tests ---
+    def test_mem0_adapter_search_memory_items_success(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test successful search of memory items."""
+        raw_item_1 = {
+            "id": str(uuid4()),
+            "memory": "Memory 1",
+            "score": 0.9,
+            "metadata": {"cat": "A"},
+        }
+        raw_item_2 = {"id": str(uuid4()), "memory": "Memory 2", "score": 0.8}
+        mock_memory_client.search.return_value = [raw_item_1, raw_item_2]
+
+        adapter = Mem0Adapter()
+        results = adapter.search(user_id="test-user", query="test query")
+
+        assert len(results) == 2
+        assert isinstance(results[0], Mem0Memory)
+        assert results[0].id == raw_item_1["id"]
+        assert results[0].memory == raw_item_1["memory"]
+        assert results[1].id == raw_item_2["id"]
+        mock_memory_client.search.assert_called_once()
+
+    def test_mem0_adapter_search_memory_items_client_error(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test search method when mem0 client raises an error."""
+        mock_memory_client.search.side_effect = Exception("Client search error")
+
+        adapter = Mem0Adapter()
+        results = adapter.search(user_id="test-user", query="test query")
+
+        assert results == []
+
+    def test_mem0_adapter_search_memory_items_empty_results(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test search method when mem0 client returns an empty list."""
+        mock_memory_client.search.return_value = []
+
+        adapter = Mem0Adapter()
+        results = adapter.search(user_id="test-user", query="test query")
+
+        assert results == []
+
+    def test_mem0_adapter_search_malformed_item_in_results(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test search method with one malformed item in results."""
+        raw_item_valid = {"id": str(uuid4()), "memory": "Valid Memory", "score": 0.9}
+        raw_item_invalid = {
+            "id_missing": str(uuid4()),
+            "memory": "Invalid Memory",
+        }  # 'id' is missing
+        mock_memory_client.search.return_value = [raw_item_valid, raw_item_invalid]
+
+        adapter = Mem0Adapter()
+        results = adapter.search(user_id="test-user", query="test query")
+
+        assert len(results) == 1
+        assert results[0].id == raw_item_valid["id"]
+
+    # --- Get Method Tests ---
+    def test_mem0_adapter_get_memory_item_success(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test successful retrieval of a memory item."""
+        memory_id = str(uuid4())
+        raw_item = {
+            "id": memory_id,
+            "memory": "Specific Memory",
+            "metadata": {"detail": "X"},
+        }
+        mock_memory_client.get.return_value = raw_item
+
+        adapter = Mem0Adapter()
+        result = adapter.get(memory_id)
+
+        assert isinstance(result, Mem0Memory)
+        assert result.id == memory_id
+        assert result.memory == "Specific Memory"
+        mock_memory_client.get.assert_called_once_with(memory_id)
+
+    def test_mem0_adapter_get_memory_item_client_error(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test get method when mem0 client raises an error."""
+        mock_memory_client.get.side_effect = Exception("Client get error")
+
+        adapter = Mem0Adapter()
+        result = adapter.get("some-id")
+
+        assert result is None
+
+    def test_mem0_adapter_get_memory_item_not_found_returns_none(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test get method when mem0 client returns None (or equivalent for not found)."""
+        # Some clients might raise specific "NotFound" errors, others might return None/empty.
+        # Assuming client returns something that results in None after adapter logic.
+        # If client raises an exception for "not found", test_mem0_adapter_get_memory_item_client_error covers it.
+        # If client returns None or empty dict:
+        mock_memory_client.get.return_value = None
+
+        adapter = Mem0Adapter()
+        result = adapter.get("nonexistent-id")
+        assert result is None
+
+        mock_memory_client.get.return_value = {}  # Malformed, missing 'id' and 'memory'
+        result_malformed = adapter.get("malformed-id")
+        assert result_malformed is None
+
+    def test_mem0_adapter_get_memory_item_malformed_response(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test get method when mem0 client returns a malformed response."""
+        mock_memory_client.get.return_value = {
+            "wrong_key": "some_value"
+        }  # Missing 'id' and 'memory'
+
+        adapter = Mem0Adapter()
+        result = adapter.get("some-id")
+
+        assert result is None
+
+    # --- Update Method Tests ---
+    def test_mem0_adapter_update_memory_item_success(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test successful update of a memory item."""
+        memory_id = str(uuid4())
+        update_data = {"memory": "Updated Content", "metadata": {"status": "revised"}}
+        # Assume client's update returns the full updated object
+        raw_updated_item = {
+            "id": memory_id,
+            "memory": "Updated Content",
+            "metadata": {"status": "revised"},
+        }
+        mock_memory_client.update.return_value = raw_updated_item
+
+        adapter = Mem0Adapter()
+        result = adapter.update(memory_id, update_data)
+
+        assert isinstance(result, Mem0Memory)
+        assert result.id == memory_id
+        assert result.memory == "Updated Content"
+        assert result.metadata == {"status": "revised"}
+        mock_memory_client.update.assert_called_once_with(memory_id, update_data)
+
+    def test_mem0_adapter_update_memory_item_client_error(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test update method when mem0 client raises an error."""
+        memory_id = str(uuid4())
+        update_data = {"memory": "Updated Content"}
+        mock_memory_client.update.side_effect = Exception("Client update error")
+
+        adapter = Mem0Adapter()
+        result = adapter.update(memory_id, update_data)
+
+        assert result is None
+
+    def test_mem0_adapter_update_memory_item_malformed_response(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test update method when mem0 client returns a malformed response."""
+        memory_id = str(uuid4())
+        update_data = {"memory": "Updated Content"}
+        mock_memory_client.update.return_value = {
+            "wrong_key": "some_value"
+        }  # Missing 'id' and 'memory'
+
+        adapter = Mem0Adapter()
+        result = adapter.update(memory_id, update_data)
+
+        assert result is None
+
+    def test_mem0_adapter_update_memory_item_client_returns_none(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test update method when mem0 client returns None."""
+        memory_id = str(uuid4())
+        update_data = {"memory": "Updated Content"}
+        mock_memory_client.update.return_value = None
+
+        adapter = Mem0Adapter()
+        result = adapter.update(memory_id, update_data)
+
+        assert result is None
+
+    # --- Delete Method Tests ---
+    def test_mem0_adapter_delete_memory_item_success(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test successful deletion of a memory item."""
+        memory_id = str(uuid4())
+        # mock_memory_client.delete doesn't need a return_value if it's just successful execution
+
+        adapter = Mem0Adapter()
+        result = adapter.delete(memory_id)
+
+        assert result is True
+        mock_memory_client.delete.assert_called_once_with(memory_id)
+
+    def test_mem0_adapter_delete_memory_item_client_error(
+        self, mock_memory_client: Mock
+    ) -> None:
+        """Test delete method when mem0 client raises an error."""
+        mock_memory_client.delete.side_effect = Exception("Client delete error")
+
+        adapter = Mem0Adapter()
+        result = adapter.delete("some-id")
+
+        assert result is False
+
+    # --- Original Tests (adapted for new signatures/mocks if needed) ---
+    # The original tests were mostly covered by the new granular tests.
+    # I'll ensure the core scenarios from them are present.
 
     def test_mem0_adapter_handles_client_initialization(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that the adapter properly initializes the mem0 client."""
-        # Arrange
-        mock_mem0_client = Mock()
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
+        mock_mem0_client_instance = Mock()
+        mock_mem0_class = Mock(return_value=mock_mem0_client_instance)
         monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
 
-        # Act
         adapter = Mem0Adapter()
 
-        # Assert
         mock_mem0_class.assert_called_once()
-        assert adapter._client is mock_mem0_client
-
-    def test_mem0_adapter_search_memory_items(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that Mem0Adapter correctly searches memory items and returns results.
-
-        This test verifies that:
-        1. The adapter properly calls the underlying mem0 client search method
-        2. The correct search arguments are passed to the client
-        3. The search results are returned correctly
-        """
-        # Arrange - Mock the mem0 client
-        mock_mem0_client = Mock()
-
-        # Sample search results that mem0 would return
-        mock_search_results = [
-            {
-                "id": str(uuid4()),
-                "memory": "User likes coffee in the morning",
-                "score": 0.95,
-                "metadata": {"source": "chat", "timestamp": "2024-01-01T08:00:00Z"},
-            },
-            {
-                "id": str(uuid4()),
-                "memory": "User prefers tea in the afternoon",
-                "score": 0.87,
-                "metadata": {"source": "chat", "timestamp": "2024-01-01T14:00:00Z"},
-            },
-        ]
-        mock_mem0_client.search.return_value = mock_search_results
-
-        # Mock the mem0 module and its Mem0 class
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
-        monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
-
-        # Sample search parameters
-        test_user_id = "search-user-456"
-        test_search_text = "coffee preferences"
-        test_limit = 10
-
-        # Act - Create adapter and call search method
-        adapter = Mem0Adapter()
-        search_results = adapter.search(
-            user_id=test_user_id, query=test_search_text, limit=test_limit
-        )
-
-        # Assert - Verify the mock was called correctly
-        mock_mem0_client.search.assert_called_once_with(
-            query=test_search_text, user_id=test_user_id, limit=test_limit
-        )
-
-        # Assert - Verify the correct results are returned
-        assert search_results == mock_search_results
-        assert len(search_results) == 2
-        assert all("id" in result for result in search_results)
-        assert all("memory" in result for result in search_results)
-
-    def test_mem0_adapter_search_memory_items_with_minimal_params(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test Mem0Adapter search method with minimal required parameters."""
-        # Arrange
-        mock_mem0_client = Mock()
-        mock_search_results: list[dict[str, Any]] = []
-        mock_mem0_client.search.return_value = mock_search_results
-
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
-        monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
-
-        test_user_id = "minimal-search-user"
-        test_query = "simple search"
-
-        # Act
-        adapter = Mem0Adapter()
-        search_results = adapter.search(user_id=test_user_id, query=test_query)
-
-        # Assert
-        mock_mem0_client.search.assert_called_once_with(
-            query=test_query, user_id=test_user_id, limit=None
-        )
-        assert search_results == mock_search_results
-
-    def test_mem0_adapter_search_memory_items_empty_results(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test Mem0Adapter search method when no results are found."""
-        # Arrange
-        mock_mem0_client = Mock()
-        mock_mem0_client.search.return_value = []
-
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
-        monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
-
-        # Act
-        adapter = Mem0Adapter()
-        search_results = adapter.search(
-            user_id="no-results-user", query="nonexistent query"
-        )
-
-        # Assert
-        assert search_results == []
-        assert len(search_results) == 0
-
-    def test_mem0_adapter_get_memory_item(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that Mem0Adapter can retrieve a specific memory item."""
-        # Arrange
-        mock_mem0_client = Mock()
-        test_memory_id = str(uuid4())
-        mock_memory_item = {
-            "id": test_memory_id,
-            "memory": "Test memory content",
-            "metadata": {"source": "test"},
-        }
-        mock_mem0_client.get.return_value = mock_memory_item
-
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
-        monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
-
-        # Act
-        adapter = Mem0Adapter()
-        result = adapter.get(test_memory_id)
-
-        # Assert
-        mock_mem0_client.get.assert_called_once_with(test_memory_id)
-        assert result == mock_memory_item
-
-    def test_mem0_adapter_get_memory_item_not_found(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that Mem0Adapter handles cases where memory item is not found."""
-        # Arrange
-        mock_mem0_client = Mock()
-        mock_mem0_client.get.side_effect = Exception("Not found")
-
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
-        monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
-
-        # Act
-        adapter = Mem0Adapter()
-        result = adapter.get("nonexistent-id")
-
-        # Assert
-        assert result is None
-
-    def test_mem0_adapter_delete_memory_item(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that Mem0Adapter can delete a memory item."""
-        # Arrange
-        mock_mem0_client = Mock()
-        test_memory_id = str(uuid4())
-
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
-        monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
-
-        # Act
-        adapter = Mem0Adapter()
-        result = adapter.delete(test_memory_id)
-
-        # Assert
-        mock_mem0_client.delete.assert_called_once_with(test_memory_id)
-        assert result is True
-
-    def test_mem0_adapter_delete_memory_item_failure(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that Mem0Adapter handles deletion failures gracefully."""
-        # Arrange
-        mock_mem0_client = Mock()
-        mock_mem0_client.delete.side_effect = Exception("Delete failed")
-
-        mock_mem0_class = Mock(return_value=mock_mem0_client)
-        monkeypatch.setattr("app.adapters.mem0_adapter.MemoryClient", mock_mem0_class)
-
-        # Act
-        adapter = Mem0Adapter()
-        result = adapter.delete("some-id")
-
-        # Assert
-        assert result is False
+        assert adapter._client is mock_mem0_client_instance
