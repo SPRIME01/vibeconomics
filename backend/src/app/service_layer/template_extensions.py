@@ -151,6 +151,8 @@ def mem0_search_extension_function(arguments: Dict[str, str], dependencies: Dict
         else:
             return "[]" # Return empty JSON array if no results
     except Exception as e:
-        # Log the exception e
-        print(f"Error calling mem0_adapter.search: {e}") # Or use proper logging
+        # Log the exception e with traceback
+        # Use proper logging instead of print
+        import logging
+        logging.exception(f"Error calling mem0_adapter.search: {e}")
         return "[]" # Return empty JSON array on error
