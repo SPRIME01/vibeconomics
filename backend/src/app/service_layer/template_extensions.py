@@ -62,9 +62,11 @@ def mem0_add_extension_function(arguments: Dict[str, str], dependencies: Dict[st
         memory_id = mem0_adapter.add(write_request)
         return memory_id if memory_id is not None else ""
     except Exception as e:
-        # Log the exception e
+        # Log the exception e with traceback
         # Consider how to report errors; returning empty string for now
-        print(f"Error calling mem0_adapter.add: {e}") # Or use proper logging
+        # Use proper logging instead of print
+        import logging
+        logging.exception(f"Error calling mem0_adapter.add: {e}")
         return ""
 
 
