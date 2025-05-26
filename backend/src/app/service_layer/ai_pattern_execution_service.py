@@ -1,4 +1,135 @@
-# from .pattern_service import PatternService
-# from .template_service import TemplateService
-# ... other engine service imports
-# from app.domain.agent.ports import AbstractConversationRepository
+from typing import Dict, Any, Optional, Type
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, ValidationError
+
+from app.domain.agent.models import Conversation, ChatMessage
+from app.domain.agent.ports import AbstractConversationRepository
+from app.service_layer.unit_of_work import AbstractUnitOfWork
+from app.service_layer.pattern_service import PatternService
+from app.service_layer.template_service import TemplateService
+from app.service_layer.strategy_service import StrategyService
+from app.service_layer.context_service import ContextService
+from app.service_layer.ai_provider_service import AIProviderService
+
+
+class EmptyRenderedPromptError(ValueError):
+    pass
+
+
+class AIPatternExecutionService:
+    def __init__(
+        self,
+        pattern_service: PatternService,
+        template_service: TemplateService,
+        strategy_service: StrategyService,
+        context_service: ContextService,
+        ai_provider_service: AIProviderService,
+        conversation_repository: AbstractConversationRepository,
+        uow: AbstractUnitOfWork,
+    ):
+        self.pattern_service = pattern_service
+        self.template_service = template_service
+        self.strategy_service = strategy_service
+        self.context_service = context_service
+        self.ai_provider_service = ai_provider_service
+        self.conversation_repository = conversation_repository
+        self.uow = uow
+
+    async def execute_pattern(
+        self,
+        pattern_name: str,
+        input_variables: Dict[str, Any],
+        session_id: Optional[UUID] = None,
+        strategy_name: Optional[str] = None,
+        context_name: Optional[str] = None,
+        model_name: Optional[str] = None,
+        output_model: Optional[Type[BaseModel]] = None,
+    ) -> Any:  # Return type will be refined later
+        
+        conversation: Conversation | None = None
+        prompt_parts = []
+
+        # Session Loading / Creation (within UoW)
+        async with self.uow: # Start Unit of Work
+            if session_id:
+                conversation = await self.conversation_repository.get_by_id(session_id)
+                if conversation:
+                    # Prepend history to prompt_parts
+                    for msg in conversation.get_messages():
+                        prompt_parts.append(f"{msg.role}: {msg.content}")
+                else:
+                    # session_id provided but no conversation found, create a new one with this ID
+                    conversation = Conversation(id=session_id)
+                    # We don't save it here; it will be saved/created after AI response
+            # If no session_id, conversation remains None for now.
+            # It will be created after we have messages.
+
+        # Prompt Assembly (Strategy, Context, Pattern)
+        if strategy_name:
+            strategy_content = await self.strategy_service.get_strategy(strategy_name)
+            if strategy_content:
+                prompt_parts.append(strategy_content)
+
+        if context_name:
+            context_content = await self.context_service.get_context_content(context_name)
+            if context_content:
+                prompt_parts.append(context_content)
+
+        pattern_content = await self.pattern_service.get_pattern_content(pattern_name)
+        if pattern_content:
+            prompt_parts.append(pattern_content)
+        else:
+            # Consider raising an error if pattern_content is crucial and not found
+            pass
+
+        # Combine and Render
+        base_prompt = "\n\n".join(prompt_parts)
+        rendered_user_prompt = await self.template_service.render(
+            template_str=base_prompt, variables=input_variables
+        )
+
+        if not rendered_user_prompt or rendered_user_prompt.isspace():
+            raise EmptyRenderedPromptError("The prompt rendered from the template is empty or whitespace.")
+
+        # Get AI Completion
+        ai_response_content = await self.ai_provider_service.get_completion(
+            prompt=rendered_user_prompt, model_name=model_name
+        )
+
+        # Session Saving (within UoW)
+        async with self.uow:
+            if conversation: # Existing or explicitly created (due to session_id given but not found)
+                conversation.add_message(role="user", content=rendered_user_prompt)
+                conversation.add_message(role="assistant", content=ai_response_content)
+                await self.conversation_repository.save(conversation) # save handles update or create if ID was set
+            else: # No session_id provided, so create a new conversation
+                # If session_id was None, conversation object is still None at this point.
+                # A new ID is generated by Conversation() if not provided.
+                new_conv_id = uuid4() # Always generate a new ID if no session was loaded/specified
+                conversation = Conversation(id=new_conv_id)
+                conversation.add_message(role="user", content=rendered_user_prompt)
+                conversation.add_message(role="assistant", content=ai_response_content)
+                # Use create for new conversations if your repository distinguishes it,
+                # otherwise save might handle it. Given the previous tasks, create is specific.
+                # However, if a session_id was provided but not found, 'conversation' object would exist
+                # with that ID, and 'save' would be more appropriate.
+                # The logic above for `if conversation:` handles the case where session_id was provided
+                # but not found, by creating `Conversation(id=session_id)`.
+                # So, this `else` block is specifically for when `session_id` was initially None.
+                await self.conversation_repository.create(conversation)
+            
+            await self.uow.commit()
+
+        if output_model:
+            try:
+                # Assuming AI response is a JSON string that can be parsed into the Pydantic model
+                parsed_response = output_model.model_validate_json(ai_response_content)
+                return parsed_response
+            except ValidationError as e:
+                # Handle parsing error, e.g., log it and raise a custom error or re-raise Pydantic's error
+                # For now, let's re-raise to make it clear to the caller
+                # In a real app, might want a more specific error or fallback.
+                raise e # Or a custom error wrapping e
+        else:
+            return ai_response_content
