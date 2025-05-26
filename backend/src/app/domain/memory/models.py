@@ -1,4 +1,6 @@
 import uuid
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, NewType
 
 from pydantic import BaseModel, Field
@@ -106,8 +108,13 @@ class MemoryQuery(BaseModel):
     )
 
 
-class MemoryQueryResult(BaseModel):
-    """Represents the result of a memory search query."""
+@dataclass(frozen=True)
+class MemoryQueryResult:
+    """DTO for memory query results following read model patterns."""
 
-    query: MemoryQuery
-    results: list[MemorySearchResultItem] = Field(default_factory=list)
+    memory_id: str
+    user_id: str
+    content: str
+    metadata: dict | None = None
+    created_at: datetime | None = None
+    relevance_score: float | None = None
