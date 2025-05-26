@@ -68,9 +68,8 @@ class TemplateService:
                         key, val = arg_pair.split('=', 1)
                         parsed_args[key.strip()] = val.strip()
                     else:
-                        # Handle cases where an arg might not have a value, though spec implies key=val
-                        # For now, we'll assume valid key=val pairs as per problem description
-                        pass # Or raise an error for malformed arguments
+                        # Raise an error for malformed arguments to catch template typos early
+                        raise ValueError(f"Malformed argument in extension: '{arg_pair.strip()}'. Expected key=value format.")
 
             # Call the extension function
             # Assuming function signature: func(arguments: Dict[str, str], dependencies: Dict[str, Any]) -> str
