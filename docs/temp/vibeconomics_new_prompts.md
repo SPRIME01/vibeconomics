@@ -117,6 +117,7 @@ Queries typically don't use UoW or publish events. Ensure strict typing."
 *(Implementation/Refactor for these handlers will come *after* the AI engine is built, if they need to use patterns. For now, ensure their current direct logic is well-tested).*
 
 ---
+################################### all above done
 
 ## Phase 1: Building the Internal Fabric-Inspired Engine
 
