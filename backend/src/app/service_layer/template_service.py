@@ -60,6 +60,8 @@ class TemplateService:
             parsed_args: Dict[str, str] = {}
             if args_str:
                 # Split arguments by comma, then by equals
+                # Split arguments by comma, then by equals
+                # Consider a more robust parser that handles quoted strings
                 args_list = args_str.split(',')
                 for arg_pair in args_list:
                     if '=' in arg_pair:
