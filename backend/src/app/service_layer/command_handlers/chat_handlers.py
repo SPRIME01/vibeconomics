@@ -22,8 +22,10 @@ class ProcessUserChatMessageCommandHandler:
             The response from the AIPatternExecutionService.
         '''
         
+CONVERSATIONAL_CHAT_PATTERN = "conversational_chat"
+
         response = await self.ai_pattern_execution_service.execute_pattern(
-            pattern_name="conversational_chat", # Or "conversational_chat.md"
+            pattern_name=CONVERSATIONAL_CHAT_PATTERN, # Or "conversational_chat.md"
             input_variables={"input": command.user_message},
             session_id=command.session_id,
             model_name=command.model_choice,
