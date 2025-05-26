@@ -1,5 +1,5 @@
 import uuid
-from typing import NewType, TypeVar
+from typing import Generic, NewType, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
@@ -25,7 +25,7 @@ class DomainEvent(BaseModel):
     # timestamp: datetime = Field(default_factory=datetime.utcnow) # Consider adding later
 
 
-class AggregateRoot(BaseModel):
+class AggregateRoot(BaseModel, Generic[EventT]):
     """
     Base class for aggregate roots in the domain model.
 
@@ -43,9 +43,9 @@ class AggregateRoot(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    _events: list[DomainEvent] = PrivateAttr(default_factory=list[DomainEvent])
+    _events: list[EventT] = PrivateAttr(default_factory=list[EventT])
 
-    def add_event(self, event: DomainEvent) -> None:
+    def add_event(self, event: EventT) -> None:
         """
         Add a domain event to the aggregate's event list.
 
@@ -57,7 +57,7 @@ class AggregateRoot(BaseModel):
         """
         self._events.append(event)
 
-    def pull_events(self) -> list[DomainEvent]:
+    def pull_events(self) -> list[EventT]:
         """
         Return all stored events and clear the internal list.
 
