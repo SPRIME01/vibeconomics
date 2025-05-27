@@ -24,6 +24,7 @@ dependencies = [
     "pyjwt>=2.10.1,<3.0.0",
     "dspy>=2.6.24",
     "mem0ai>=0.1.101",
+    "pika>=1.3.2,<2.0.0",
 ]
 
 [tool.uv]
