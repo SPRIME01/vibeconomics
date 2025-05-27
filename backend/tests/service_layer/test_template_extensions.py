@@ -1,9 +1,13 @@
-import json # Added
+import json
+from typing import Any
 from unittest.mock import Mock
 
-from app.adapters.activepieces_adapter import ActivePiecesAdapter # Added
+from app.adapters.activepieces_adapter import ActivePiecesAdapter
 from app.adapters.mem0_adapter import MemorySearchResult
-from app.service_layer.memory_service import MemoryService # Keep if TemplateService requires it, or remove if None is fine
+from app.service_layer.memory_service import MemoryService
+from app.service_layer.template_extensions import (
+    TemplateExtensionRegistry,  # Add this import
+)
 from app.service_layer.template_service import TemplateService
 
 
@@ -55,54 +59,153 @@ def test_activepieces_extension() -> None:
     # Arrange
     mock_activepieces_adapter = Mock(spec=ActivePiecesAdapter)
     expected_workflow_id = "wf_123"
-    input_data: dict[str, any] = {"param1": "value1", "param2": 100}
-    # In the template, the input data must be a single string.
-    # If it's JSON, it needs to be a JSON string.
-    # The `process_template_extensions` in TemplateExtensionRegistry splits args by ':',
-    # so complex JSON strings with internal colons might be an issue if not handled carefully.
-    # For this test, assume input_data_str is a well-formed JSON string passed as a single argument segment.
-    # The current parser in TemplateExtensionRegistry (based on the problem description)
-    # uses `args = [arg.strip() for arg in args_str.split(":")]`.
-    # This implies the JSON string itself should not contain colons, or the parsing logic
-    # for arguments needs to be robust enough (e.g. knowing the last arg is a JSON blob).
-    # For simplicity, we'll assume the JSON string is simple or the parsing logic is robust.
-    # Given the `activepieces_run_workflow` expects `input_data_str`, this is what we pass in the template.
+    input_data: dict[str, Any] = {"param1": "value1", "param2": 100}
     input_data_json_str = json.dumps(input_data)
 
-    expected_workflow_result_dict: dict[str, any] = {
+    expected_workflow_result_dict: dict[str, Any] = {
         "status": "completed",
         "output_data": {"result": "all good"},
     }
-    mock_activepieces_adapter.run_workflow.return_value = (
-        expected_workflow_result_dict
-    )
+    mock_activepieces_adapter.run_workflow.return_value = expected_workflow_result_dict
 
-    # Instantiate TemplateService with the mock ActivePiecesAdapter
-    # Pass None for memory_service if not relevant for this specific test.
     template_service = TemplateService(
         activepieces_adapter=mock_activepieces_adapter, memory_service=None
     )
 
-    # Construct the template content string
-    # The args_str is split by ':', so workflow_id is args[0], input_data_json_str is args[1]
-    # for the `activepieces_run_workflow` function if called via the registry's simple split.
-    # The bound function `bound_activepieces_run_workflow` expects (workflow_id: str, input_data_str: str)
-    template_content = (
-        f"Output: {{activepieces:run_workflow:{expected_workflow_id}:{input_data_json_str}}}"
-    )
-
-    # The expected output string
+    template_content = f"Output: {{{{activepieces:run_workflow:{expected_workflow_id}:{input_data_json_str}}}}}"
     expected_output_str = f"Output: {json.dumps(expected_workflow_result_dict)}"
 
     # Act
     result: str = template_service.process_template(template_content)
 
-    # Assert
-    # The bound function `bound_activepieces_run_workflow` calls the actual
-    # `activepieces_run_workflow` which then calls `mock_activepieces_adapter.run_workflow`
-    # The `activepieces_run_workflow` function parses the JSON string.
-    mock_activepieces_adapter.run_workflow.assert_called_once_with(
-        workflow_id=expected_workflow_id, input_data=input_data
+    # Assert - First check that the extension was processed (template placeholder was replaced)
+    assert "{{activepieces:run_workflow" not in result, (
+        f"Extension was not processed. Result: {result}"
     )
+
+    # Then check that the adapter was called correctly
+    mock_activepieces_adapter.run_workflow.assert_called_once()
+    call_args = mock_activepieces_adapter.run_workflow.call_args
+    assert call_args.kwargs["workflow_id"] == expected_workflow_id
+    assert call_args.kwargs["input_data"] == input_data
+
+    # Finally check the output
     assert result == expected_output_str
     assert isinstance(result, str)
+
+
+def test_activepieces_extension_invalid_json() -> None:
+    """Test that TemplateService returns error for invalid JSON input and does not call adapter."""
+    mock_activepieces_adapter = Mock(spec=ActivePiecesAdapter)
+    template_service = TemplateService(
+        activepieces_adapter=mock_activepieces_adapter, memory_service=None
+    )
+    workflow_id = "wf_456"
+    invalid_json_str = '{"param1": "value1", "param2": 100'  # Missing closing }
+
+    template_content = (
+        f"Result: {{{{activepieces:run_workflow:{workflow_id}:{invalid_json_str}}}}}"
+    )
+
+    # Act
+    result = template_service.process_template(template_content)
+
+    # Assert - First check that the extension was processed
+    assert "{{activepieces:run_workflow" not in result, (
+        f"Extension was not processed. Result: {result}"
+    )
+
+    # Then check for error indicators
+    assert "Invalid JSON input" in result or "error" in result or "ERROR" in result, (
+        f"No error found in result: {result}"
+    )
+
+    # Finally ensure adapter was not called
+    mock_activepieces_adapter.run_workflow.assert_not_called()
+
+
+def test_debug_extension_parsing() -> None:
+    """Debug test to understand extension parsing."""
+    mock_activepieces_adapter = Mock(spec=ActivePiecesAdapter)
+    mock_activepieces_adapter.run_workflow.return_value = {"test": "result"}
+
+    template_service = TemplateService(
+        activepieces_adapter=mock_activepieces_adapter, memory_service=None
+    )
+
+    # Check what extensions are registered
+    print(
+        f"Registered extensions: {list(template_service.extension_registry._extensions.keys())}"
+    )
+
+    # Test boundary finding directly
+    registry = template_service.extension_registry
+    test_template = '{{activepieces:run_workflow:test_id:{"key":"value"}}}'
+    boundaries = registry._find_extension_boundaries(test_template)
+    print(f"Found boundaries: {boundaries}")
+
+    # Check if the extension function exists
+    if boundaries:
+        start_pos, end_pos, namespace, operation, args_str = boundaries[0]
+        extension_name = f"{namespace}_{operation}"
+        print(f"Looking for extension: {extension_name}")
+        print(f"Extension exists: {extension_name in registry._extensions}")
+
+        if extension_name in registry._extensions:
+            extension_func = registry._extensions[extension_name]
+            print(f"Extension function: {extension_func}")
+
+            # Try calling it directly
+            try:
+                if ":" in args_str:
+                    workflow_id, input_data_str = args_str.split(":", 1)
+                    result = extension_func(workflow_id.strip(), input_data_str.strip())
+                    print(f"Direct call result: {result}")
+                else:
+                    result = extension_func(args_str.strip(), "{}")
+                    print(f"Direct call result (no args): {result}")
+            except Exception as e:
+                print(f"Direct call error: {e}")
+                import traceback
+
+                traceback.print_exc()
+    else:
+        print("No boundaries found!")
+
+    # Test with different template formats
+    templates_to_test = [
+        "{{activepieces:run_workflow:test_id:{}}}",
+        '{{activepieces:run_workflow:test_id:{"key":"value"}}}',
+        "{{activepieces_run_workflow:test_id:{}}}",  # Try underscore format
+    ]
+
+    for template in templates_to_test:
+        print(f"\nTesting template: {template}")
+        result = template_service.process_template(template)
+        print(f"Result: {result}")
+
+
+# Add test to verify boundary detection
+def test_boundary_detection() -> None:
+    """Test the boundary detection specifically."""
+    registry = TemplateExtensionRegistry()
+
+    # Test simple case
+    simple = "{{memory:search:user123:query text}}"
+    boundaries = registry._find_extension_boundaries(simple)
+    assert len(boundaries) == 1
+    start, end, namespace, operation, args = boundaries[0]
+    assert namespace == "memory"
+    assert operation == "search"
+    assert args == "user123:query text"
+
+    # Test with JSON
+    json_template = (
+        '{{activepieces:run_workflow:wf_123:{"param1":"value1","param2":100}}}'
+    )
+    boundaries = registry._find_extension_boundaries(json_template)
+    assert len(boundaries) == 1
+    start, end, namespace, operation, args = boundaries[0]
+    assert namespace == "activepieces"
+    assert operation == "run_workflow"
+    assert args == 'wf_123:{"param1":"value1","param2":100}'

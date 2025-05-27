@@ -1,9 +1,10 @@
 import json  # Ensure json is imported at the top
-import re
 from collections.abc import Callable
-from typing import Any, Dict
+from typing import Any
 
-from app.adapters.activepieces_adapter import ActivePiecesAdapter
+from app.adapters.activepieces_adapter import (
+    AbstractActivePiecesAdapter,  # Changed import for consistency
+)
 from app.adapters.mem0_adapter import (  # Assuming Mem0Adapter and MemoryWriteRequest are available here
     Mem0Adapter,
     MemoryWriteRequest,
@@ -188,13 +189,15 @@ def mem0_search_extension_function(
 
 
 def activepieces_run_workflow(
-    activepieces_adapter: ActivePiecesAdapter, workflow_id: str, input_data_str: str
+    activepieces_adapter: AbstractActivePiecesAdapter,
+    workflow_id: str,
+    input_data_str: str,
 ) -> str:
     """
     Runs an ActivePieces workflow and returns the result as a JSON string.
 
     Args:
-        activepieces_adapter: An instance of ActivePiecesAdapter.
+        activepieces_adapter: An instance of AbstractActivePiecesAdapter.
         workflow_id: The ID of the workflow to run.
         input_data_str: A JSON string representing the input data for the workflow.
 
@@ -203,24 +206,20 @@ def activepieces_run_workflow(
         or a JSON string with an error message if an error occurs.
     """
     try:
-        parsed_input_data: Dict[str, Any] = json.loads(input_data_str)
+        # Trim whitespace and ensure we have at least empty JSON
+        input_data_str = input_data_str.strip() or "{}"
+        parsed_input_data: dict[str, Any] = json.loads(input_data_str)
     except json.JSONDecodeError as e:
-        # Use proper logging in a real application
-        # print(f"JSONDecodeError: {e}")
         return json.dumps({"success": False, "error": f"Invalid JSON input: {e}"})
 
+    # Catch adapter exceptions
     try:
         result = activepieces_adapter.run_workflow(
             workflow_id=workflow_id, input_data=parsed_input_data
         )
         return json.dumps(result)
     except Exception as e:
-        # Use proper logging in a real application
-        # print(f"Workflow execution error: {e}")
-        # Consider more specific error handling based on adapter exceptions
-        return json.dumps(
-            {"success": False, "error": f"Failed to execute workflow: {e}"}
-        )
+        return json.dumps({"success": False, "error": str(e)})
 
 
 class TemplateExtensionRegistry:
@@ -241,42 +240,153 @@ class TemplateExtensionRegistry:
         """List all registered extensions."""
         return self._extensions.copy()
 
+    def _find_extension_boundaries(
+        self, template: str
+    ) -> list[tuple[int, int, str, str, str]]:
+        """
+        Find all extension boundaries in the template.
+
+        Returns:
+            List of tuples: (start_pos, end_pos, namespace, operation, args)
+        """
+        extensions = []
+        i = 0
+
+        while i < len(template) - 1:
+            # Look for opening {{
+            if template[i : i + 2] == "{{":
+                start_pos = i
+                i += 2
+
+                # Parse namespace (until first colon)
+                namespace = ""
+                while i < len(template) and template[i] not in ":}":
+                    namespace += template[i]
+                    i += 1
+
+                if i >= len(template) or template[i] != ":":
+                    i = start_pos + 1
+                    continue
+
+                i += 1  # Skip first colon
+
+                # Parse operation (until second colon)
+                operation = ""
+                while i < len(template) and template[i] not in ":}":
+                    operation += template[i]
+                    i += 1
+
+                if i >= len(template) or template[i] != ":":
+                    i = start_pos + 1
+                    continue
+
+                i += 1  # Skip second colon
+
+                # Parse arguments (until matching }))
+                args = ""
+                in_string = False
+                escape_next = False
+                brace_depth = 0  # Track nested braces inside JSON
+
+                while i < len(template):
+                    char = template[i]
+
+                    # Check for end of extension first
+                    if (
+                        not in_string
+                        and i + 1 < len(template)
+                        and template[i : i + 2] == "}}"
+                        and brace_depth == 0
+                    ):
+                        # Found the end of extension
+                        i += 2  # Skip both closing braces
+                        break
+
+                    if escape_next:
+                        args += char
+                        escape_next = False
+                    elif char == "\\" and in_string:
+                        args += char
+                        escape_next = True
+                    elif char == '"' and not escape_next:
+                        in_string = not in_string
+                        args += char
+                    elif char == "{" and not in_string:
+                        brace_depth += 1
+                        args += char
+                    elif char == "}" and not in_string:
+                        brace_depth -= 1
+                        args += char
+                    else:
+                        args += char
+
+                    i += 1
+
+                # Check if we found a complete extension
+                if i <= len(template) and args:
+                    # Found complete extension
+                    extensions.append(
+                        (
+                            start_pos,
+                            i,
+                            namespace.strip(),
+                            operation.strip(),
+                            args.strip(),
+                        )
+                    )
+                else:
+                    # Malformed extension, continue from start + 1
+                    i = start_pos + 1
+            else:
+                i += 1
+
+        return extensions
+
     async def process_template_extensions(
         self, template: str, variables: dict[str, Any]
     ) -> str:
         """Process template extensions in the format {{namespace:operation:args}}."""
-        pattern = r"\{\{([^:}]+):([^:}]+):([^}]*)\}\}"
-
         processed_template = template
 
-        # Iteratively find and replace extensions
-        # This approach can be more robust for complex cases or for debugging.
-        while True:
-            match = re.search(pattern, processed_template)
-            if not match:
-                break  # No more extensions found
+        # Process extensions from right to left to maintain positions
+        extensions = self._find_extension_boundaries(template)
 
-            namespace = match.group(1).strip()
-            operation = match.group(2).strip()
-            args_str = match.group(3).strip()
-
+        for start_pos, end_pos, namespace, operation, args_str in reversed(extensions):
             extension_name = f"{namespace}_{operation}"
-            full_match_str = match.group(0)  # The entire {{...}} string
-
-            replacement_text = full_match_str  # Default to original text if extension fails or not found
+            full_match_str = template[start_pos:end_pos]
+            replacement_text = full_match_str
 
             if extension_name in self._extensions:
-                args = [arg.strip() for arg in args_str.split(":")] if args_str else []
                 try:
                     extension_function = self._extensions[extension_name]
-                    replacement_text = extension_function(*args)
-                except Exception:
-                    # In a real scenario, log the exception e
-                    replacement_text = f"[ERROR IN EXTENSION: {extension_name}]"
 
-            # Replace only the first occurrence in this iteration
-            processed_template = processed_template.replace(
-                full_match_str, replacement_text, 1
+                    # Parse arguments based on extension type
+                    if extension_name == "activepieces_run_workflow":
+                        if ":" in args_str:
+                            workflow_id, input_data_str = args_str.split(":", 1)
+                            args = [workflow_id.strip(), input_data_str.strip()]
+                        else:
+                            args = [args_str.strip(), "{}"]
+                    elif extension_name == "memory_search":
+                        if ":" in args_str:
+                            user_id, query = args_str.split(":", 1)
+                            args = [user_id.strip(), query.strip()]
+                        else:
+                            args = [args_str.strip()]
+                    else:
+                        args = [args_str.strip()] if args_str else []
+
+                    replacement_text = extension_function(*args)
+                except Exception as e:
+                    replacement_text = (
+                        f"[ERROR IN EXTENSION: {extension_name} - {str(e)}]"
+                    )
+
+            # Replace this specific occurrence
+            processed_template = (
+                processed_template[:start_pos]
+                + replacement_text
+                + processed_template[end_pos:]
             )
 
         return processed_template
@@ -356,7 +466,7 @@ def create_memory_extensions(
 
 
 def create_activepieces_extensions(
-    activepieces_adapter: ActivePiecesAdapter,
+    activepieces_adapter: AbstractActivePiecesAdapter,
 ) -> dict[str, Callable[..., str]]:
     """
     Create ActivePieces-related template extensions bound to an ActivePieces adapter.
@@ -368,15 +478,25 @@ def create_activepieces_extensions(
         Dictionary of extension functions.
     """
 
-    def bound_activepieces_run_workflow(
-        workflow_id: str, input_data_str: str
-    ) -> str:
+    def bound_activepieces_run_workflow(workflow_id: str, input_data_str: str) -> str:
         """
         Bound version of activepieces_run_workflow that uses the provided adapter.
         """
-        return activepieces_run_workflow(
-            activepieces_adapter, workflow_id, input_data_str
-        )
+        try:
+            # Trim whitespace and ensure we have at least empty JSON
+            input_data_str = input_data_str.strip() or "{}"
+            parsed_input_data: dict[str, Any] = json.loads(input_data_str)
+        except json.JSONDecodeError as e:
+            return json.dumps({"success": False, "error": f"Invalid JSON input: {e}"})
+
+        # Catch adapter exceptions
+        try:
+            result = activepieces_adapter.run_workflow(
+                workflow_id=workflow_id, input_data=parsed_input_data
+            )
+            return json.dumps(result)
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)})
 
     return {
         "activepieces_run_workflow": bound_activepieces_run_workflow,
@@ -396,6 +516,7 @@ def parse_extension_call(extension_text: str) -> tuple[str, dict[str, Any]]:
     Returns:
         Tuple of (extension_name, kwargs)
     """
+    # Only split on the first two colons; everything after is a single argument
     parts = extension_text.split(":", 2)
 
     if len(parts) < 3:
@@ -409,6 +530,7 @@ def parse_extension_call(extension_text: str) -> tuple[str, dict[str, Any]]:
 
     # For memory:search, expect format: user_id:query
     if extension_name == "memory:search":
+        # Only split the args_part on the first colon
         arg_parts = args_part.split(":", 1)
         if len(arg_parts) != 2:
             raise ValueError(
@@ -417,39 +539,5 @@ def parse_extension_call(extension_text: str) -> tuple[str, dict[str, Any]]:
 
         return extension_name, {"user_id": arg_parts[0], "query": arg_parts[1]}
 
-    raise ValueError(f"Unknown extension: {extension_name}")
-
-
-def process_template_extensions(
-    template_content: str, extension_registry: TemplateExtensionRegistry
-) -> str:
-    """
-    Process template extensions in template content.
-
-    Args:
-        template_content: Template content with extension calls
-        extension_registry: Registry of available extensions
-
-    Returns:
-        Template content with extensions processed
-    """
-    # Pattern to match {{extension:call:args}}
-    extension_pattern = r"\{\{([^}]+)\}\}"
-
-    def replace_extension(match: re.Match[str]) -> str:
-        extension_text = match.group(1)
-
-        try:
-            extension_name, kwargs = parse_extension_call(extension_text)
-            extension_func = extension_registry.get(extension_name)
-
-            if extension_func is None:
-                return f"{{{{ERROR: Unknown extension '{extension_name}'}}}}"
-
-            result = extension_func(**kwargs)
-            return result
-
-        except Exception as e:
-            return f"{{{{ERROR: {str(e)}}}}}"
-
-    return re.sub(extension_pattern, replace_extension, template_content)
+    # For other extensions, treat args_part as a single argument (e.g., JSON string)
+    return extension_name, {"args": [args_part]}
