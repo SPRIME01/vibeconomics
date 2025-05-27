@@ -11,6 +11,7 @@ from app.service_layer.pattern_service import PatternService
 from app.service_layer.strategy_service import StrategyService
 from app.service_layer.template_service import TemplateService
 from app.service_layer.unit_of_work import AbstractUnitOfWork
+from app.adapters.a2a_client_adapter import A2AClientAdapter # Import A2AClientAdapter
 
 
 class EmptyRenderedPromptError(ValueError):
@@ -27,6 +28,7 @@ class AIPatternExecutionService:
         ai_provider_service: AIProviderService,
         uow: AbstractUnitOfWork,
         memory_service: AbstractMemoryService | None = None,
+        a2a_client_adapter: A2AClientAdapter | None = None, # Add a2a_client_adapter
     ):
         self.pattern_service = pattern_service
         self.template_service = template_service
@@ -35,6 +37,7 @@ class AIPatternExecutionService:
         self.ai_provider_service = ai_provider_service
         self.uow = uow
         self.memory_service = memory_service
+        self.a2a_client_adapter = a2a_client_adapter # Store a2a_client_adapter
 
     async def execute_pattern(
         self,
@@ -92,15 +95,17 @@ class AIPatternExecutionService:
         enhanced_variables = input_variables.copy()
 
         # Make memory service available to template extensions if provided
-        template_context = {}
+        template_context_data = {}
         if self.memory_service:
-            template_context["memory_service"] = self.memory_service
+            template_context_data["memory_service"] = self.memory_service
+        if self.a2a_client_adapter: # Pass adapter to template context
+            template_context_data["a2a_client_adapter"] = self.a2a_client_adapter
 
         # Render the final prompt with template extensions support
         rendered_prompt = await self.template_service.render(
             template=base_prompt,
             variables=enhanced_variables,
-            context=template_context,
+            context_data=template_context_data, # Pass the dictionary here
         )
 
         if not rendered_prompt or rendered_prompt.strip() == "":
