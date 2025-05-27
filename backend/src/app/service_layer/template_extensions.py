@@ -7,8 +7,7 @@ from app.adapters.mem0_adapter import (  # Assuming Mem0Adapter and MemoryWriteR
     Mem0Adapter,
     MemoryWriteRequest,
 )
-
-from .memory_service import MemoryService
+from app.service_layer.memory_service import AbstractMemoryService
 
 
 # Define specific exception for argument errors if desired, or use ValueError
@@ -205,9 +204,49 @@ class TemplateExtensionRegistry:
         """List all registered extensions."""
         return self._extensions.copy()
 
+    async def process_template_extensions(
+        self, template: str, variables: dict[str, Any]
+    ) -> str:
+        """Process template extensions in the format {{namespace:operation:args}}."""
+        pattern = r"\{\{([^:}]+):([^:}]+):([^}]*)\}\}"
+
+        processed_template = template
+
+        # Iteratively find and replace extensions
+        # This approach can be more robust for complex cases or for debugging.
+        while True:
+            match = re.search(pattern, processed_template)
+            if not match:
+                break  # No more extensions found
+
+            namespace = match.group(1).strip()
+            operation = match.group(2).strip()
+            args_str = match.group(3).strip()
+
+            extension_name = f"{namespace}_{operation}"
+            full_match_str = match.group(0)  # The entire {{...}} string
+
+            replacement_text = full_match_str  # Default to original text if extension fails or not found
+
+            if extension_name in self._extensions:
+                args = [arg.strip() for arg in args_str.split(":")] if args_str else []
+                try:
+                    extension_function = self._extensions[extension_name]
+                    replacement_text = extension_function(*args)
+                except Exception:
+                    # In a real scenario, log the exception e
+                    replacement_text = f"[ERROR IN EXTENSION: {extension_name}]"
+
+            # Replace only the first occurrence in this iteration
+            processed_template = processed_template.replace(
+                full_match_str, replacement_text, 1
+            )
+
+        return processed_template
+
 
 def memory_search_extension(
-    memory_service: MemoryService, user_id: str, query: str, limit: int = 5
+    memory_service: AbstractMemoryService, user_id: str, query: str, limit: int = 5
 ) -> str:
     """
     Template extension function for memory search.
@@ -241,7 +280,7 @@ def memory_search_extension(
 
 
 def create_memory_extensions(
-    memory_service: MemoryService,
+    memory_service: AbstractMemoryService,
 ) -> dict[str, Callable[..., str]]:
     """
     Create memory-related template extensions bound to a memory service.
@@ -256,8 +295,26 @@ def create_memory_extensions(
     def bound_memory_search(user_id: str, query: str, limit: int = 5) -> str:
         return memory_search_extension(memory_service, user_id, query, limit)
 
+    def memory_add(user_id: str, content: str, metadata: str = "{}") -> str:
+        """Template extension for adding memories."""
+        try:
+            import json
+
+            metadata_dict = json.loads(metadata) if metadata != "{}" else None
+            memory_id = memory_service.add(
+                user_id=user_id, content=content, metadata=metadata_dict
+            )
+            return (
+                f"Memory stored with ID: {memory_id}"
+                if memory_id
+                else "Failed to store memory"
+            )
+        except Exception as e:
+            return f"Error storing memory: {str(e)}"
+
     return {
-        "memory:search": bound_memory_search,
+        "memory_search": bound_memory_search,
+        "memory_add": memory_add,
     }
 
 

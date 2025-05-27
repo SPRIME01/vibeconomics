@@ -1,50 +1,62 @@
-import pytest
 from unittest import mock
-from uuid import UUID, uuid4
-from typing import Type
+from uuid import uuid4
 
+import pytest
 from pydantic import BaseModel, ValidationError
 
-from app.service_layer.ai_pattern_execution_service import AIPatternExecutionService, EmptyRenderedPromptError # Added EmptyRenderedPromptError
-from app.domain.agent.models import Conversation, ChatMessage
+from app.adapters.mem0_adapter import MemorySearchResult
+from app.domain.agent.models import ChatMessage, Conversation
 from app.domain.agent.ports import AbstractConversationRepository
-from app.service_layer.unit_of_work import AbstractUnitOfWork
-from app.service_layer.pattern_service import PatternService
-from app.service_layer.template_service import TemplateService
-from app.service_layer.strategy_service import StrategyService
-from app.service_layer.context_service import ContextService
+from app.service_layer.ai_pattern_execution_service import (  # Added EmptyRenderedPromptError
+    AIPatternExecutionService,
+    EmptyRenderedPromptError,
+)
 from app.service_layer.ai_provider_service import AIProviderService
+from app.service_layer.context_service import ContextService
+from app.service_layer.memory_service import AbstractMemoryService
+from app.service_layer.pattern_service import PatternService
+from app.service_layer.strategy_service import StrategyService
+from app.service_layer.template_service import TemplateService
+from app.service_layer.unit_of_work import AbstractUnitOfWork
 
 
 @pytest.fixture
 def mock_pattern_service() -> mock.Mock:
     return mock.Mock(spec=PatternService)
 
+
 @pytest.fixture
 def mock_template_service() -> mock.Mock:
     return mock.Mock(spec=TemplateService)
+
 
 @pytest.fixture
 def mock_strategy_service() -> mock.Mock:
     return mock.Mock(spec=StrategyService)
 
+
 @pytest.fixture
 def mock_context_service() -> mock.Mock:
     return mock.Mock(spec=ContextService)
+
 
 @pytest.fixture
 def mock_ai_provider_service() -> mock.Mock:
     return mock.Mock(spec=AIProviderService)
 
+
 @pytest.fixture
 def mock_conversation_repository() -> mock.Mock:
     return mock.Mock(spec=AbstractConversationRepository)
+
 
 @pytest.fixture
 def mock_uow() -> mock.Mock:
     # Ensure mock_uow supports async with
     uow_mock = mock.Mock(spec=AbstractUnitOfWork)
-    uow_mock.__aenter__ = mock.AsyncMock(return_value=uow_mock) # Make __aenter__ return the mock itself or a relevant context
+    uow_mock.__aenter__ = mock.AsyncMock(
+        return_value=uow_mock
+    )  # Make __aenter__ return the mock itself or a relevant context
     uow_mock.__aexit__ = mock.AsyncMock(return_value=None)
     return uow_mock
 
@@ -83,8 +95,8 @@ async def test_execute_pattern_happy_path(
     mock_strategy_service: mock.Mock,
     mock_context_service: mock.Mock,
     mock_ai_provider_service: mock.Mock,
-    mock_conversation_repository: mock.Mock, # Not used directly in this test but part of service init
-    mock_uow: mock.Mock, # Not used directly in this test but part of service init
+    mock_conversation_repository: mock.Mock,  # Not used directly in this test but part of service init
+    mock_uow: mock.Mock,  # Not used directly in this test but part of service init
 ) -> None:
     # Arrange
     pattern_name = "test_pattern"
@@ -97,9 +109,13 @@ async def test_execute_pattern_happy_path(
     mock_strategy_content = "Strategy: Think step-by-step."
     mock_context_content = "Context: Some context."
     mock_pattern_content = "Pattern: {{name}}"
-    
-    expected_base_prompt = f"{mock_strategy_content}\n\n{mock_context_content}\n\n{mock_pattern_content}"
-    expected_rendered_prompt = "Strategy: Think step-by-step.\n\nContext: Some context.\n\nPattern: TestUser"
+
+    expected_base_prompt = (
+        f"{mock_strategy_content}\n\n{mock_context_content}\n\n{mock_pattern_content}"
+    )
+    expected_rendered_prompt = (
+        "Strategy: Think step-by-step.\n\nContext: Some context.\n\nPattern: TestUser"
+    )
     expected_ai_response = "AI response here"
 
     mock_strategy_service.get_strategy.return_value = mock_strategy_content
@@ -132,7 +148,7 @@ async def test_execute_pattern_happy_path(
     mock_strategy_service.get_strategy.assert_called_once_with(strategy_name)
     mock_context_service.get_context_content.assert_called_once_with(context_name)
     mock_pattern_service.get_pattern_content.assert_called_once_with(pattern_name)
-    
+
     mock_template_service.render.assert_called_once_with(
         template_str=expected_base_prompt, variables=input_variables
     )
@@ -161,9 +177,9 @@ async def test_execute_pattern_creates_new_session(
     mock_pattern_service.get_pattern_content.return_value = "User query: {{query}}"
     mock_template_service.render.return_value = expected_rendered_prompt
     mock_ai_provider_service.get_completion.return_value = expected_ai_response
-    
+
     # Ensure no conversation is found initially if a (None) session_id would be passed
-    mock_conversation_repository.get_by_id.return_value = None 
+    mock_conversation_repository.get_by_id.return_value = None
 
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -179,19 +195,19 @@ async def test_execute_pattern_creates_new_session(
     await service.execute_pattern(
         pattern_name=pattern_name,
         input_variables=input_variables,
-        session_id=None, # Explicitly no session_id
+        session_id=None,  # Explicitly no session_id
     )
 
     # Assert
     # Check that create was called, capturing the conversation
-    captured_conversation = mock.ทาน() # Placeholder for unittest.mock.ANY or a captor
-    
+    captured_conversation = mock.ทาน()  # Placeholder for unittest.mock.ANY or a captor
+
     # We need to use mock.ANY or capture the argument if using unittest.mock
     # Pytest's mock typically uses call_args
-    
+
     # Assert create was called once
     mock_conversation_repository.create.assert_called_once()
-    
+
     # Get the conversation object passed to create
     args, _ = mock_conversation_repository.create.call_args
     created_conversation: Conversation = args[0]
@@ -203,7 +219,7 @@ async def test_execute_pattern_creates_new_session(
     assert created_conversation.messages[0].content == expected_rendered_prompt
     assert created_conversation.messages[1].role == "assistant"
     assert created_conversation.messages[1].content == expected_ai_response
-    
+
     mock_uow.commit.assert_called_once()
 
 
@@ -221,17 +237,17 @@ async def test_execute_pattern_loads_existing_session(
     session_id = uuid4()
     pattern_name = "test_pattern"
     input_variables = {"new_query": "follow up"}
-    
+
     mock_existing_conversation = mock.Mock(spec=Conversation)
     mock_existing_conversation.id = session_id
     old_user_message = ChatMessage(role="user", content="Old message")
     mock_existing_conversation.get_messages.return_value = [old_user_message]
-    
+
     mock_conversation_repository.get_by_id.return_value = mock_existing_conversation
-    
+
     mock_pattern_service.get_pattern_content.return_value = "Pattern: {{new_query}}"
     # This is the prompt that will be sent to the AI, including history and new input
-    expected_rendered_prompt_for_ai = "user: Old message\n\nPattern: follow up" 
+    expected_rendered_prompt_for_ai = "user: Old message\n\nPattern: follow up"
     # This is what template_service.render will receive (base_prompt without history)
     # The history is prepended *before* this base_prompt is constructed for rendering
     # So, the `base_prompt` for rendering will be "Pattern: {{new_query}}"
@@ -239,11 +255,11 @@ async def test_execute_pattern_loads_existing_session(
     # Let's adjust the test based on the implementation:
     # prompt_parts (history) -> strategy -> context -> pattern -> rendered_user_prompt
     # The test should reflect that `template_service.render` gets the *non-history* part
-    
-    expected_base_prompt_for_render = "Pattern: {{new_query}}" # What render gets
+
+    expected_base_prompt_for_render = "Pattern: {{new_query}}"  # What render gets
     # rendered_user_prompt is the result of rendering expected_base_prompt_for_render
-    rendered_user_prompt_from_template = "Pattern: follow up" 
-    
+    rendered_user_prompt_from_template = "Pattern: follow up"
+
     mock_template_service.render.return_value = rendered_user_prompt_from_template
     expected_ai_response = "AI response to follow up"
     mock_ai_provider_service.get_completion.return_value = expected_ai_response
@@ -267,7 +283,7 @@ async def test_execute_pattern_loads_existing_session(
 
     # Assert
     mock_conversation_repository.get_by_id.assert_called_once_with(session_id)
-    
+
     # The template_service.render is called with the base_prompt that includes history, strategy, context, pattern
     # In this test, we only have history and pattern.
     # The service logic is:
@@ -275,7 +291,7 @@ async def test_execute_pattern_loads_existing_session(
     # 2. Add pattern -> prompt_parts = ["user: Old message", "Pattern: {{new_query}}"]
     # 3. Join -> base_prompt = "user: Old message\n\nPattern: {{new_query}}"
     # 4. Render -> rendered_user_prompt = "user: Old message\n\nPattern: follow up" (this goes to AI)
-    
+
     # So template_service.render should be called with the combined prompt string
     # (history + pattern_template)
     expected_template_str_for_render = f"{old_user_message.role}: {old_user_message.content}\n\nPattern: {{{{new_query}}}}"
@@ -283,7 +299,7 @@ async def test_execute_pattern_loads_existing_session(
     mock_template_service.render.assert_called_once_with(
         template_str=expected_template_str_for_render, variables=input_variables
     )
-    
+
     # add_message should be called with the rendered_user_prompt (which is the full prompt to AI)
     # and the AI response
     calls = [
@@ -292,8 +308,10 @@ async def test_execute_pattern_loads_existing_session(
     ]
     mock_existing_conversation.add_message.assert_has_calls(calls, any_order=False)
     assert mock_existing_conversation.add_message.call_count == 2
-    
-    mock_conversation_repository.save.assert_called_once_with(mock_existing_conversation)
+
+    mock_conversation_repository.save.assert_called_once_with(
+        mock_existing_conversation
+    )
     mock_uow.commit.assert_called_once()
 
 
@@ -301,8 +319,8 @@ async def test_execute_pattern_loads_existing_session(
 async def test_execute_pattern_uses_provided_session_id_for_new_conversation(
     mock_pattern_service: mock.Mock,
     mock_template_service: mock.Mock,
-    mock_strategy_service: mock.Mock, # Added for completeness
-    mock_context_service: mock.Mock,   # Added for completeness
+    mock_strategy_service: mock.Mock,  # Added for completeness
+    mock_context_service: mock.Mock,  # Added for completeness
     mock_ai_provider_service: mock.Mock,
     mock_conversation_repository: mock.Mock,
     mock_uow: mock.Mock,
@@ -314,16 +332,17 @@ async def test_execute_pattern_uses_provided_session_id_for_new_conversation(
     expected_rendered_prompt = "Data: some data"
     expected_ai_response = "AI response for provided session ID"
 
-    mock_conversation_repository.get_by_id.return_value = None # Simulate conversation not found
-    
+    mock_conversation_repository.get_by_id.return_value = (
+        None  # Simulate conversation not found
+    )
+
     mock_pattern_service.get_pattern_content.return_value = "Data: {{data}}"
     mock_template_service.render.return_value = expected_rendered_prompt
     mock_ai_provider_service.get_completion.return_value = expected_ai_response
-    
+
     # Mock strategy and context to return None or not be called if not provided
     mock_strategy_service.get_strategy.return_value = None
     mock_context_service.get_context_content.return_value = None
-
 
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -339,29 +358,29 @@ async def test_execute_pattern_uses_provided_session_id_for_new_conversation(
     await service.execute_pattern(
         pattern_name=pattern_name,
         input_variables=input_variables,
-        session_id=provided_session_id, # Provide the session_id
+        session_id=provided_session_id,  # Provide the session_id
     )
 
     # Assert
     mock_conversation_repository.get_by_id.assert_called_once_with(provided_session_id)
-    
+
     # In the current implementation, if session_id is provided but not found,
     # a Conversation object is created with that ID, and then 'save' is called.
     # 'create' is only called if session_id was initially None.
-    mock_conversation_repository.save.assert_called_once() 
-    mock_conversation_repository.create.assert_not_called() # Ensure create is not called
+    mock_conversation_repository.save.assert_called_once()
+    mock_conversation_repository.create.assert_not_called()  # Ensure create is not called
 
     args, _ = mock_conversation_repository.save.call_args
     saved_conversation: Conversation = args[0]
 
     assert isinstance(saved_conversation, Conversation)
-    assert saved_conversation.id == provided_session_id # Key assertion
+    assert saved_conversation.id == provided_session_id  # Key assertion
     assert len(saved_conversation.messages) == 2
     assert saved_conversation.messages[0].role == "user"
     assert saved_conversation.messages[0].content == expected_rendered_prompt
     assert saved_conversation.messages[1].role == "assistant"
     assert saved_conversation.messages[1].content == expected_ai_response
-    
+
     mock_uow.commit.assert_called_once()
 
 
@@ -382,20 +401,19 @@ async def test_execute_pattern_happy_path_no_strategy_no_context(
     # session_id = uuid4() # session_id is not strictly needed for this test's core logic
 
     mock_pattern_content = "Pattern: Describe {{item}}."
-    expected_base_prompt = mock_pattern_content # Only pattern content
+    expected_base_prompt = mock_pattern_content  # Only pattern content
     expected_rendered_prompt = "Pattern: Describe Widget."
     expected_ai_response = "AI: A widget is a small gadget."
 
     # Ensure strategy and context services return None or are not called
-    mock_strategy_service.get_strategy.return_value = None 
+    mock_strategy_service.get_strategy.return_value = None
     mock_context_service.get_context_content.return_value = None
-    
+
     mock_pattern_service.get_pattern_content.return_value = mock_pattern_content
     mock_template_service.render.return_value = expected_rendered_prompt
     mock_ai_provider_service.get_completion.return_value = expected_ai_response
     # For this test, assume get_by_id returns None if session_id were passed and not None
     mock_conversation_repository.get_by_id.return_value = None
-
 
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -411,9 +429,9 @@ async def test_execute_pattern_happy_path_no_strategy_no_context(
     result = await service.execute_pattern(
         pattern_name=pattern_name,
         input_variables=input_variables,
-        session_id=None, # Pass None for session_id to ensure create path for conversation
+        session_id=None,  # Pass None for session_id to ensure create path for conversation
         strategy_name=None,  # No strategy
-        context_name=None,   # No context
+        context_name=None,  # No context
         model_name=model_name,
     )
 
@@ -453,9 +471,11 @@ async def test_execute_pattern_with_output_model_success(
     ai_json_response = '{"name": "Test", "value": 123}'
 
     mock_pattern_service.get_pattern_content.return_value = "Some pattern"
-    mock_template_service.render.return_value = "Rendered prompt" # The content of this doesn't matter for output parsing
+    mock_template_service.render.return_value = (
+        "Rendered prompt"  # The content of this doesn't matter for output parsing
+    )
     mock_ai_provider_service.get_completion.return_value = ai_json_response
-    mock_conversation_repository.get_by_id.return_value = None # Assume new session
+    mock_conversation_repository.get_by_id.return_value = None  # Assume new session
 
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -494,12 +514,14 @@ async def test_execute_pattern_with_output_model_parsing_error(
     # Arrange
     pattern_name = "test_parsing_error_pattern"
     input_variables = {}
-    invalid_ai_json_response = '{"name": "Test", "value": "not_an_int"}' # value should be int
+    invalid_ai_json_response = (
+        '{"name": "Test", "value": "not_an_int"}'  # value should be int
+    )
 
     mock_pattern_service.get_pattern_content.return_value = "Some pattern"
     mock_template_service.render.return_value = "Rendered prompt"
     mock_ai_provider_service.get_completion.return_value = invalid_ai_json_response
-    mock_conversation_repository.get_by_id.return_value = None # Assume new session
+    mock_conversation_repository.get_by_id.return_value = None  # Assume new session
 
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -539,7 +561,7 @@ async def test_execute_pattern_without_output_model_returns_raw_string(
     mock_pattern_service.get_pattern_content.return_value = "Some pattern"
     mock_template_service.render.return_value = "Rendered prompt"
     mock_ai_provider_service.get_completion.return_value = raw_response
-    mock_conversation_repository.get_by_id.return_value = None # Assume new session
+    mock_conversation_repository.get_by_id.return_value = None  # Assume new session
 
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -556,7 +578,7 @@ async def test_execute_pattern_without_output_model_returns_raw_string(
         pattern_name=pattern_name,
         input_variables=input_variables,
         session_id=None,
-        output_model=None, # Explicitly no output model
+        output_model=None,  # Explicitly no output model
     )
 
     # Assert
@@ -588,7 +610,7 @@ async def test_execute_pattern_with_simulated_template_extension(
     # Notionally, pattern_content could be: "Pattern with {{extension:some_extension:arg}} and {{name}}"
     # The actual content here doesn't strictly matter as render is mocked.
     mock_pattern_content = "Pattern with {{extension:some_extension:arg}} and {{name}}"
-    
+
     # This is the key part: simulate that template_service.render processed the extension
     # and produced a prompt including the extension's output.
     simulated_rendered_prompt_with_extension_output = (
@@ -597,15 +619,16 @@ async def test_execute_pattern_with_simulated_template_extension(
     expected_ai_response = "AI response based on extended prompt"
 
     mock_pattern_service.get_pattern_content.return_value = mock_pattern_content
-    mock_template_service.render.return_value = simulated_rendered_prompt_with_extension_output
+    mock_template_service.render.return_value = (
+        simulated_rendered_prompt_with_extension_output
+    )
     mock_ai_provider_service.get_completion.return_value = expected_ai_response
-    
+
     # Assume new session for simplicity, as session handling is tested elsewhere
     mock_conversation_repository.get_by_id.return_value = None
     # Assume no strategy or context for simplicity
     mock_strategy_service.get_strategy.return_value = None
     mock_context_service.get_context_content.return_value = None
-
 
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -621,7 +644,7 @@ async def test_execute_pattern_with_simulated_template_extension(
     result = await service.execute_pattern(
         pattern_name=pattern_name,
         input_variables=input_variables,
-        session_id=None, # New session
+        session_id=None,  # New session
         strategy_name=None,
         context_name=None,
         model_name=model_name,
@@ -633,15 +656,15 @@ async def test_execute_pattern_with_simulated_template_extension(
     mock_template_service.render.assert_called_once_with(
         template_str=mock_pattern_content, variables=input_variables
     )
-    
+
     # Crucially, verify ai_provider_service.get_completion was called with the
     # output from template_service.render (which simulates the extension's effect).
     mock_ai_provider_service.get_completion.assert_called_once_with(
         prompt=simulated_rendered_prompt_with_extension_output, model_name=model_name
     )
-    
+
     assert result == expected_ai_response
-    
+
     # Verify conversation saving happened as expected (simplified check)
     mock_conversation_repository.create.assert_called_once()
     mock_uow.commit.assert_called_once()
@@ -663,13 +686,12 @@ async def test_execute_pattern_raises_error_on_empty_rendered_prompt(
 
     mock_pattern_service.get_pattern_content.return_value = "Some pattern content"
     mock_template_service.render.return_value = ""  # Empty string
-    
+
     # These mocks might not be strictly necessary if the error is raised before they are called
     # but including them for completeness of service instantiation.
     mock_strategy_service.get_strategy.return_value = None
     mock_context_service.get_context_content.return_value = None
     mock_conversation_repository.get_by_id.return_value = None
-
 
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -682,13 +704,16 @@ async def test_execute_pattern_raises_error_on_empty_rendered_prompt(
     )
 
     # Act & Assert
-    with pytest.raises(EmptyRenderedPromptError, match="The prompt rendered from the template is empty or whitespace."):
+    with pytest.raises(
+        EmptyRenderedPromptError,
+        match="The prompt rendered from the template is empty or whitespace.",
+    ):
         await service.execute_pattern(
             pattern_name=pattern_name,
             input_variables=input_variables,
             session_id=None,
         )
-    
+
     # Ensure AI completion and saving were not called
     mock_ai_provider_service.get_completion.assert_not_called()
     mock_conversation_repository.create.assert_not_called()
@@ -724,7 +749,7 @@ async def test_execute_pattern_raises_error_on_whitespace_rendered_prompt(
 
     mock_pattern_service.get_pattern_content.return_value = "Some pattern content"
     mock_template_service.render.return_value = "   "  # Whitespace string
-    
+
     mock_strategy_service.get_strategy.return_value = None
     mock_context_service.get_context_content.return_value = None
     mock_conversation_repository.get_by_id.return_value = None
@@ -740,13 +765,117 @@ async def test_execute_pattern_raises_error_on_whitespace_rendered_prompt(
     )
 
     # Act & Assert
-    with pytest.raises(EmptyRenderedPromptError, match="The prompt rendered from the template is empty or whitespace."):
+    with pytest.raises(
+        EmptyRenderedPromptError,
+        match="The prompt rendered from the template is empty or whitespace.",
+    ):
         await service.execute_pattern(
             pattern_name=pattern_name,
             input_variables=input_variables,
             session_id=None,
         )
-        
+
     mock_ai_provider_service.get_completion.assert_not_called()
     mock_conversation_repository.create.assert_not_called()
     mock_conversation_repository.save.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_execute_pattern_includes_session_history():
+    """Test that session history is properly included in the prompt."""
+    # Arrange
+    session_id = uuid4()
+    existing_conversation = Conversation(id=session_id)
+    existing_conversation.add_message("user", "Previous user message")
+    existing_conversation.add_message("assistant", "Previous assistant response")
+
+    mock_uow = AsyncMock()
+    mock_uow.conversations.get_by_id.return_value = existing_conversation
+    mock_uow.__aenter__ = AsyncMock(return_value=mock_uow)
+    mock_uow.__aexit__ = AsyncMock(return_value=None)
+
+    mock_pattern_service = AsyncMock()
+    mock_pattern_service.get_pattern_content.return_value = "Current task: {{input}}"
+
+    mock_template_service = AsyncMock()
+    mock_template_service.render.return_value = "Rendered prompt with history"
+
+    mock_ai_provider = AsyncMock()
+    mock_ai_provider.get_completion.return_value = "AI response"
+
+    service = AIPatternExecutionService(
+        pattern_service=mock_pattern_service,
+        template_service=mock_template_service,
+        strategy_service=AsyncMock(),
+        context_service=AsyncMock(),
+        ai_provider_service=mock_ai_provider,
+        uow=mock_uow,
+    )
+
+    # Act
+    result = await service.execute_pattern(
+        pattern_name="test_pattern",
+        input_variables={"input": "Current user input"},
+        session_id=session_id,
+    )
+
+    # Assert
+    assert result == "AI response"
+
+    # Verify that template service was called with a prompt containing history
+    mock_template_service.render.assert_called_once()
+    rendered_template_call = mock_template_service.render.call_args[1]["template"]
+    assert "Conversation History" in rendered_template_call
+    assert "USER: Previous user message" in rendered_template_call
+    assert "ASSISTANT: Previous assistant response" in rendered_template_call
+
+
+@pytest.mark.asyncio
+async def test_execute_pattern_with_memory_service_available():
+    """Test that memory service is made available to template extensions."""
+    # Arrange
+    mock_memory_service = Mock(spec=AbstractMemoryService)
+    mock_memory_service.search.return_value = [
+        MemorySearchResult(id="1", content="Memory content", score=0.9, metadata=None)
+    ]
+
+    mock_uow = AsyncMock()
+    mock_uow.__aenter__ = AsyncMock(return_value=mock_uow)
+    mock_uow.__aexit__ = AsyncMock(return_value=None)
+
+    mock_pattern_service = AsyncMock()
+    mock_pattern_service.get_pattern_content.return_value = (
+        "Pattern with {{memory:search:user123:test query}}"
+    )
+
+    mock_template_service = AsyncMock()
+    mock_template_service.render.return_value = "Rendered prompt with memory results"
+
+    mock_ai_provider = AsyncMock()
+    mock_ai_provider.get_completion.return_value = "AI response"
+
+    service = AIPatternExecutionService(
+        pattern_service=mock_pattern_service,
+        template_service=mock_template_service,
+        strategy_service=AsyncMock(),
+        context_service=AsyncMock(),
+        ai_provider_service=mock_ai_provider,
+        uow=mock_uow,
+        memory_service=mock_memory_service,
+    )
+
+    # Act
+    result = await service.execute_pattern(
+        pattern_name="test_pattern",
+        input_variables={"input": "test"},
+    )
+
+    # Assert
+    assert result == "AI response"
+
+    # Verify that template service was called with memory service in context
+    mock_template_service.render.assert_called_once()
+    call_args = mock_template_service.render.call_args[1]
+    assert "context" in call_args
+    assert "memory_service" in call_args["context"]
+    assert call_args["context"]["memory_service"] == mock_memory_service

@@ -74,6 +74,7 @@ testpaths = [
 ]
 python_files = ["test_*.py", "*_test.py", "tests.py"]
 addopts = "--import-mode=importlib -v"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 # ...existing mypy config...
