@@ -51,26 +51,13 @@ class RabbitMQMessageBus(AbstractMessageBus):
         ) as e:
             self._logger.error(f"Failed to publish event {routing_key}: {e}", exc_info=True)
             raise MessageBusError(f"Failed to publish event {routing_key}: {e}") from e
-        finally:
-            # Pika's BlockingConnection manages channels in a way that they are typically
-            # associated with the thread. Explicitly closing them here might be premature
-            # if the connection is meant to be long-lived and channels reused.
-            # For this implementation, we assume channels are obtained as needed and Pika
-            # or the connection lifecycle manages their closure.
-            # If channel = self._connection.channel() always returns a *new* channel,
-            # then it should be closed:
-            # if channel and channel.is_open:
-            #    channel.close()
-            # For now, assuming channel is obtained and potentially closed per operation if opened.
-            # If self._connection.channel() creates a new channel each time, it should be closed.
-            # If it reuses one, then closing it might be problematic.
-            # Pika's BlockingChannel usually means one channel per thread.
-            # Let's assume it's okay to leave the channel open as it's tied to the connection,
-            # or that pika handles its lifecycle with BlockingConnection.
-            # If explicit close is needed:
-            # if channel and channel.is_open:
-            #     channel.close()
-            pass
+            if channel and channel.is_open:
+                try:
+                    channel.close()
+                    self._logger.debug(f"Closed channel for publishing event {routing_key}")
+                except Exception as e:
+                    # Log an error if closing the channel fails, but don't let it overshadow the original exception
+                    self._logger.warning(f"Error closing channel after publishing event {routing_key}: {e}", exc_info=True)
 
 
     async def publish_batch(self, events: List[DomainEvent]) -> None:
