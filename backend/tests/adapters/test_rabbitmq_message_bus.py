@@ -46,6 +46,9 @@ async def test_rabbitmq_message_bus_subscribe_and_handle() -> None:
     # because the actual RabbitMQMessageBus is used.
     bus.register_handler(SampleDomainEvent, mock_handler)
 
+    # Assert that queue_declare was called with the correct arguments
+    mock_channel.queue_declare.assert_called_with(queue='SampleDomainEvent', durable=True)
+
     # Check that basic_consume was called and capture the on_message_callback argument
     mock_channel.basic_consume.assert_called_once()
     
