@@ -135,7 +135,13 @@ class RabbitMQMessageBus(AbstractMessageBus):
                 ch.basic_ack(delivery_tag=method.delivery_tag)
                 
             except (json.JSONDecodeError, ValidationError) as e:
-                self._logger.error(f"Failed to decode or validate message for event '{event_type_name}': {body.decode('utf-8')}, error: {e}. NACKing.", exc_info=True)
+                decoded_body = body.decode('utf-8', errors='replace')
+                max_log_length = 200
+                sanitized_body = (decoded_body[:max_log_length] + '... [truncated]') if len(decoded_body) > max_log_length else decoded_body
+                self._logger.error(
+                    f"Failed to decode or validate message for event '{event_type_name}': {sanitized_body}, error: {e}. NACKing.",
+                    exc_info=True
+                )
                 ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             except Exception as e:
                 self._logger.error(f"Error processing message for event '{event_type_name}', delivery_tag {method.delivery_tag}: {e}. Body: {body[:200]}. NACKing.", exc_info=True)
