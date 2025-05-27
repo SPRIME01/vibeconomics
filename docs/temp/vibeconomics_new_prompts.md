@@ -117,7 +117,7 @@ Queries typically don't use UoW or publish events. Ensure strict typing."
 *(Implementation/Refactor for these handlers will come *after* the AI engine is built, if they need to use patterns. For now, ensure their current direct logic is well-tested).*
 
 ---
-################################### all above done
+
 
 ## Phase 1: Building the Internal Fabric-Inspired Engine
 
@@ -446,6 +446,7 @@ Ensure streaming is handled correctly if `AIPatternExecutionService` and `AIProv
 
 ---
 
+################################### all above done
 ## Phase 4 & Beyond: NLWeb, MCP, Other Integrations, E2E Tests
 
 This follows the same TDD pattern:
@@ -465,16 +466,92 @@ It should mock `AIPatternExecutionService` and assert it's called with an `"nlwe
 
 This detailed, phased set of prompts should guide Copilot effectively. Remember to provide context and review its output at each step. Good luck!
 
+###############################
+------------------------------------------------
 
-### References
 
-1. **A Comprehensive Guide to Vibe Coding Tools | by Madhukar Kumar | Mar, 2025 | Medium**. [https://madhukarkumar.medium.com](https://madhukarkumar.medium.com/a-comprehensive-guide-to-vibe-coding-tools-2bd35e2d7b4f)
-2. **A Practical Roadmap for Adopting Vibe Coding - The New Stack**. [https://thenewstack.io](https://thenewstack.io/a-practical-roadmap-for-vibe-coding-adoption/)
-3. **Vibe coding: Your roadmap to becoming an AI developer - The GitHub Blog**. [https://github.blog](https://github.blog/ai-and-ml/vibe-coding-your-roadmap-to-becoming-an-ai-developer/)
-4. **Product Roadmap Guide: What is it & How to Create One | Atlassian**. [https://www.atlassian.com](https://www.atlassian.com/agile/product-management/product-roadmaps)
-5. **Vibe coding, some thoughts and predictions - by Andrew Chen**. [https://andrewchen.substack.com](https://andrewchen.substack.com/p/predictionsthoughts-on-vibe-coding)
-6. **vibe-coding/README.md at main · EnzeD/vibe-coding**. [https://github.com](https://github.com/EnzeD/vibe-coding/blob/main/README.md)
-7. **A Structured Workflow for "Vibe Coding" Full-Stack Apps - DEV Community**. [https://dev.to](https://dev.to/wasp/a-structured-workflow-for-vibe-coding-full-stack-apps-352l)
-8. **Vibe Code a Retro Game in 3 Prompts - by Bilgin Ibryam**. [https://generativeprogrammer.com](https://generativeprogrammer.com/p/vibe-code-a-retro-game-in-3-prompts)
-9. **What I Learned from Vibe Coding - DEV Community**. [https://dev.to](https://dev.to/erikch/what-i-learned-vibe-coding-30em)
-10. **Everything You Want to Know About Product Roadmaps - | Vibe**. [https://vibe.us](https://vibe.us/blog/product-roadmaps/)
+Okay, I can help you outline the remaining series of prompts for Jules (or a similar coding agent) to complete the integration of your Agentic Application Framework, following the structure and TDD approach established in the previous phases.
+
+Based on the sources and our conversation history, you have completed Phase 0, 1, 2, and 3 of the prompts detailed in the `vibeconomics_new_prompts.md` source. This means the core architectural patterns (Hexagonal, CQRS, DDD, UoW, Message Bus, DI) are in place, the internal Fabric-inspired engine (PatternService, TemplateService, StrategyService, ContextService, AIProviderService with LiteLLM, AIPatternExecutionService) is implemented, the Memory System (Mem0 adapter, domain, handlers) is set up, and the OpenAI-compatible chat endpoint (`/v1/chat/completions`) that uses the internal engine via a chat command/handler is implemented. LibreChat is configured to use this backend.
+
+The remaining work, corresponding to "Phase 4 & Beyond", involves integrating **NLWeb/MCP, ActivePieces, Google ADK, CopilotKit, implementing Fabric-inspired patterns, developing more complex patterns/workflows leveraging the internal engine, and writing comprehensive End-to-End (E2E) tests**.
+
+Here is a proposed structure for the remaining prompts, maintaining the TDD (Test-Driven Development) approach and focus on strict typing:
+
+--------------------------------------------------------------------------------
+
+### Phase 4 & Beyond: NLWeb, MCP, Other Integrations, E2E Tests
+This phase focuses on integrating the remaining external services and frontend components, solidifying the application with Fabric-inspired patterns and advanced workflows, and ensuring the entire framework functions correctly with comprehensive End-to-End tests.
+
+Remember to provide the agent with the **relevant existing code and directory structure** as context for each prompt, especially the `vibeconomics` repository itself, which serves as the base application. Reinforce the requirement for **strict type hints and Mypy compliance**.
+
+#### Step 4.1: NLWeb and MCP Integration
+Integrate NLWeb to expose application capabilities via natural language and the Model Context Protocol (MCP), allowing discovery and interaction by agents and tools like ActivePieces. This involves creating entrypoints and service layer logic that might leverage the internal AI engine (AIPatternExecutionService) to interpret natural language requests or execute actions defined as patterns.
+
+*   **Prompt 4.1.1 (Test - NLWeb /ask Endpoint):** "In `backend/tests/entrypoints/api/routes/test_nlweb_mcp.py`, write a pytest test `test_nlweb_ask_endpoint`. This test should simulate a natural language query to a `/nlweb/ask` endpoint. It should **mock the AIPatternExecutionService** and assert that the service is called with a specific pattern (e.g., 'nlweb_ask_query') and the user's query as input variables. Ensure strict typing."
+*   **Prompt 4.1.2 (Implement - NLWeb /ask Endpoint):** "In `backend/src/app/entrypoints/api/routes/nlweb_mcp.py`, implement the FastAPI endpoint `/nlweb/ask`. This endpoint should accept a natural language query, potentially user ID or context. It should **create and dispatch a Command or Query** (e.g., `HandleNLWebAskQuery`) to the service layer. The handler for this command/query will use the **AIPatternExecutionService** with a suitable pattern to process the natural language request. Ensure strict typing. Make tests pass."
+*   **Prompt 4.1.3 (Test - NLWeb /mcp Endpoint):** "In `backend/tests/entrypoints/api/routes/test_nlweb_mcp.py`, write a pytest test `test_mcp_discovery_endpoint`. This test should call a `/nlweb/mcp` endpoint and verify that it returns a valid MCP manifest describing the application's capabilities (exposed as 'tools'). Ensure the manifest structure is correct. Ensure strict typing."
+*   **Prompt 4.1.4 (Implement - NLWeb /mcp Endpoint):** "In `backend/src/app/entrypoints/api/routes/nlweb_mcp.py`, implement the FastAPI endpoint `/nlweb/mcp`. This endpoint should generate and return a JSON response conforming to the MCP standard, describing the patterns, commands, or queries your application exposes as agent capabilities. **Ensure strict typing.** Make tests pass."
+*   **Prompt 4.1.5 (Implement - NLWeb/MCP Service Logic):** "In `backend/src/app/service_layer/nlweb_service.py`, implement the service layer logic for handling NLWeb requests and generating the MCP manifest. This service will be used by the entrypoint handlers. It should **interact with PatternService** to discover available patterns that are marked as exposed via NLWeb/MCP. Ensure strict typing."
+xxx
+#### Step 4.2: Mem0 Integration (Advanced Usage via Internal Engine)
+While the basic Mem0 adapter and handlers are set up (Phase 0, 1), prompts are needed to ensure Mem0 is effectively used by the internal AI engine and patterns. Mem0 interactions should be accessible via the AIPatternExecutionService, potentially through template extensions or directly within patterns.
+
+*   **Prompt 4.2.1 (Test - Memory Access in Template Extension):** "In `backend/tests/service_layer/test_template_service.py` (or a new test_template_extensions.py), add a test `test_memory_template_extension`. This test should verify that TemplateService can process a template containing a custom extension like `{{memory:search:user_id:query}}`. **Mock the MemoryService** (which in turn uses the Mem0Adapter) and assert that `MemoryService.search` is called with the correct arguments (user_id, query). Assert that the extension's output is correctly substituted into the template. Ensure strict typing."
+*   **Prompt 4.2.2 (Implement - Memory Template Extension):** "In `backend/src/app/service_layer/template_extensions.py` (create this file), implement a template extension function for memory access, e.g., `memory_search(user_id: str, query: str) -> str`. This function should **use the MemoryService** to search Mem0 and return the results (formatted as a string for now). Register this extension with your TemplateService. Ensure strict typing."
+*   **Prompt 4.2.3 (Refactor - AIPatternExecutionService for Memory):** "Review `backend/src/app/service_layer/ai_pattern_execution_service.py`. Ensure that when a pattern is executed, **session history from the Conversation aggregate is automatically included in the prompt** for the AIProviderService. Also, ensure the service can make the MemoryService available to template extensions or directly to the prompt rendering process if patterns use specific syntax for memory retrieval. Ensure strict typing."
+
+#### Step 4.3: ActivePieces Integration (Workflow Automation)
+Integrate ActivePieces to orchestrate complex workflows, potentially invoking tasks exposed via MCP from your FastAPI application or other services. ActivePieces workflows can be triggered by your backend, or your patterns can invoke ActivePieces as a tool via template extensions or AIPatternExecutionService logic.
+
+*   **Prompt 4.3.1 (Test - ActivePieces Template Extension):** "In `backend/tests/service_layer/test_template_extensions.py`, add a test `test_activepieces_extension`. This test should verify that TemplateService can process a template containing an extension like `{{activepieces:run_workflow:workflow_id:input_data}}`. **Mock the ActivePiecesAdapter** and assert that `ActivePiecesAdapter.run_workflow` is called with the correct arguments. Assert that the extension returns the workflow result. Ensure strict typing."
+*   **Prompt 4.3.2 (Implement - ActivePieces Template Extension and Adapter):** "In `backend/src/app/adapters/activepieces_adapter.py`, implement an adapter for interacting with ActivePieces (e.g., using its API client). Include methods like `run_workflow(workflow_id: str, input_data: Dict[str, Any]) -> Dict[str, Any]`. In `backend/src/app/service_layer/template_extensions.py`, implement an extension function `activepieces_run_workflow` that uses this adapter. Register the extension. Ensure strict typing. Make tests pass."
+*   **Prompt 4.3.3 (Implement - Pattern for ActivePieces Use):** "Create a simple Markdown pattern file in `backend/src/app/patterns/run_workflow.md`. This pattern should demonstrate how to use the `{{activepieces:run_workflow:workflow_id:input_data}}` template extension based on user input variables. For example: 'Okay, I will run workflow {{workflow_id}} with this data: {{input_data | json}}'. Ensure strict typing."
+
+#### Step 4.4: Google ADK Integration (Agent-to-Agent Communication)
+Integrate Google ADK principles, focusing on Agent-to-Agent (A2A) communication. In this framework, ADK might define how agents (potentially implemented using DSPy) communicate or delegate tasks, perhaps coordinated by ActivePieces or custom orchestration logic within AIPatternExecutionService. This is more about applying principles and potentially using a Python library if available and relevant, rather than integrating a specific service. The core orchestration might be handled by ActivePieces or the internal engine.
+
+*   **Prompt 4.4.1 (Refactor - Agent Definition with A2A Concepts):** "Review the agent-related domain models (e.g., in `backend/src/app/domain/agent/models.py`) and potential DSPy agent definitions (in `backend/src/app/service_layer/agent_reasoning.py` or a new `agents/` directory). Incorporate concepts from Google ADK, such as defining agent capabilities and communication protocols, perhaps using Pydantic models or structured configurations. Ensure strict typing."
+*   **Prompt 4.4.2 (Refactor - AIPatternExecutionService for A2A):** "Review `backend/src/app/service_layer/ai_pattern_execution_service.py`. If implementing complex A2A directly, the service might need logic to **interpret agent responses that indicate delegation or require communication with another agent**. Consider how patterns could define A2A steps (e.g., via a structured output parsed by Outlines, which triggers a subsequent action). This might involve **adding methods to AIPatternExecutionService** to facilitate inter-agent calls or state management. Ensure strict typing."
+
+#### Step 4.5: Fabric Pattern Implementation
+Implement specific problem-solving patterns inspired by Fabric as DSPy modules or structured patterns callable by the internal engine.
+
+*   **Prompt 4.5.1 (Test - Fabric-inspired DSPy Pattern):** "In `backend/tests/service_layer/test_agent_reasoning.py` (or a new `tests/service_layer/test_fabric_patterns.py`), write a pytest test `test_fabric_rag_pattern`. This test should instantiate a DSPy module that implements a Retrieval-Augmented Generation (RAG) pattern (as described in the guide). **Mock necessary dependencies** like the retriever (e.g., a vector DB client used by DSPy or a service layer) and the language model (via DSPy configuration). Provide sample input and assert that the output generated by the DSPy module is in the expected format and incorporates retrieved context. Ensure strict typing."
+*   **Prompt 4.5.2 (Implement - Fabric-inspired DSPy Pattern):** "In `backend/src/app/service_layer/agent_reasoning.py` (or a new `backend/src/app/service_layer/fabric_patterns.py`), implement a DSPy module for a Fabric-inspired RAG pattern. This module should define a `dspy.Signature` and a `dspy.Module` (e.g., `dspy.ChainOfThought`, `dspy.Retrieve`, etc.) that orchestrates retrieval and generation. It should take input variables (like a user query) and produce structured output using Outlines if needed. Ensure strict typing. Make tests pass."
+*   **Prompt 4.5.3 (Refactor - AIPatternExecutionService for DSPy Modules):** "Review `backend/src/app/service_layer/ai_pattern_execution_service.py`. Ensure it can **seamlessly execute patterns that are backed by DSPy modules** instead of just raw prompts. This might involve detecting a pattern configuration that points to a DSPy module and invoking it, passing the necessary input variables. Consider how DSPy's optimization capabilities could be integrated later. Ensure strict typing."
+
+#### Step 4.6: Advanced Pattern and Workflow Development
+Develop more complex, multi-step AI patterns leveraging the integrated components (memory, external tools via template extensions) orchestrated by the AIPatternExecutionService.
+
+*   **Prompt 4.6.1 (Implement - Complex Workflow Pattern):** "Create a new Markdown pattern file in `backend/src/app/patterns/research_and_summarize.md`. This pattern should define a complex workflow using template extensions. For example, it could:
+    1. Search memory for prior context: `{{memory:search:{{user_id}}:research topic: 5}}`
+    2. Use an external tool (simulated via an extension) to find information: `{{external_tool:search_web:{{input_query}} | json}}`
+    3. Use DSPy (implicitly via the core AIPatternExecutionService logic and a sub-pattern or structured output) to summarize the search results and memory context.
+    The pattern content should guide the LLM through these steps using clear instructions and incorporating the output of extensions. Ensure placeholders for relevant input variables (e.g., `{{user_id}}`, `{{input_query}}`)."
+*   **Prompt 4.6.2 (Refactor - AIPatternExecutionService for Complex Logic):** "Review `backend/src/app/service_layer/ai_pattern_execution_service.py` to ensure its `execute_pattern` method can handle **patterns that weave together history, context, strategy, input, and the output of template extensions** to construct the final prompt for the AIProviderService. Ensure it can parse potentially complex responses, perhaps using an `output_model` specific to the pattern."
+
+#### Step 4.7: CopilotKit Integration (Frontend)
+Integrate CopilotKit into the React frontend to embed AI assistance in non-chat UI components, interacting with the backend services (which use the internal engine).
+
+*   **Prompt 4.7.1 (Frontend - Implement CopilotKit Component):** "In the React frontend (`frontend/src/`), integrate CopilotKit. Implement a component like `CopilotSidebar` on a sample page (e.g., a dashboard or knowledge base page). This component should be configured to communicate with your FastAPI backend's `/execute-pattern` endpoint (or a dedicated `/copilot` endpoint that uses the internal engine). Use `useCopilotReadable` to expose relevant frontend state (like the current page content) as context for the AI. Ensure strict typing (TypeScript)."
+*   **Prompt 4.7.2 (Frontend - Implement CopilotKit Actions):** "In the frontend, implement examples of custom CopilotKit actions using `useCopilotAction`. These actions should allow the AI sidebar to trigger specific UI updates or backend calls based on user commands (e.g., 'Summarize this page', 'Create a task based on this message'). These actions will interact with your FastAPI backend, dispatching commands/queries that utilize the internal AI engine. Ensure strict typing (TypeScript)."
+*   **Prompt 4.7.3 (Implement - Backend Endpoint for CopilotKit):** "In `backend/src/app/entrypoints/api/routes/agent_actions.py` (or a new `copilot_api.py`), implement FastAPI endpoints specifically for CopilotKit actions. These endpoints should receive requests from the frontend, **dispatch appropriate Commands or Queries** to the service layer, which will then use the AIPatternExecutionService with specific patterns designed for these actions. Ensure strict typing."
+
+#### Step 4.8: End-to-End (E2E) Tests
+Write comprehensive E2E tests to verify the full data flow through the integrated system, involving frontend-to-backend communication, agent orchestration, memory usage, and pattern execution.
+
+*   **Prompt 4.8.1 (Implement - E2E Chat Flow Test):** "In `backend/tests/e2e/test_e2e_chat.py`, implement a full E2E test for the chat flow. This test should use `fastapi.testclient.TestClient` to simulate requests coming from the frontend (LibreChat's perspective via the `/v1/chat/completions` endpoint). The test should:
+    1. Send an initial message.
+    2. Send a follow-up message that requires memory/context from the first message.
+    3. Assert that the responses are correct, indicating that **DSPy reasoning, session handling (Conversation Aggregate), and Mem0 memory retrieval/storage** occurred correctly (verification might involve inspecting logs, mock calls, or a test database if set up).
+    Ensure strict typing."
+*   **Prompt 4.8.2 (Implement - E2E Workflow Execution Test):** "In `backend/tests/e2e/test_e2e_workflows.py`, implement an E2E test that verifies the execution of a complex pattern involving external tools. This test should simulate a call to the `/execute-pattern` endpoint. It should **mock any *external* services** (like the actual ActivePieces API or the simulated external tool in Prompt 4.6.1) but allow the flow through the internal engine (PatternService, TemplateService, AIPatternExecutionService) and template extensions to proceed. Assert that the mocked external services were called correctly and that the final response from the pattern execution endpoint is as expected. Ensure strict typing."
+*   **Prompt 4.8.3 (Implement - E2E NLWeb/MCP Interaction Test):** "In `backend/tests/e2e/test_e2e_nlweb_mcp.py`, implement an E2E test that simulates an agent (like ActivePieces) discovering and interacting with your application via MCP. This test should:
+    1. Call the `/nlweb/mcp` endpoint to get the manifest.
+    2. Parse the manifest to find a specific tool/capability endpoint.
+    3. Call the discovered endpoint with simulated input data, verifying that it correctly **triggers the underlying command/query handler and utilizes the internal AI engine** if the action requires AI processing.
+    Ensure strict typing."
+*   **Prompt 4.8.4 (Refactor - Testing Infrastructure):** "Review the testing setup (`backend/tests/`). Ensure `conftest.py` provides useful fixtures for mocking key components (UoW, MessageBus, AIProviderService, MemoryService, ActivePiecesAdapter, etc.) consistently across different test types (unit, integration, e2e). Ensure the test structure mirrors the source structure. Ensure strict typing for all test files."
+
+This detailed breakdown should provide the necessary steps and specifications for the coding agent to complete the framework implementation using TDD and strict typing, integrating the remaining components and architectural patterns. Remember to review the agent's output carefully after each prompt.

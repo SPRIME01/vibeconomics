@@ -3,6 +3,8 @@
 from types import TracebackType
 from typing import Any, Protocol, runtime_checkable
 
+from app.adapters.conversation_repository_inmemory import InMemoryConversationRepository
+
 
 @runtime_checkable
 class AbstractUnitOfWork(Protocol):
@@ -77,3 +79,41 @@ class AbstractUnitOfWork(Protocol):
             List of domain events to be published.
         """
         ...
+
+
+class FakeUnitOfWork(AbstractUnitOfWork):
+    """
+    A fake Unit of Work for testing purposes.
+    It uses an in-memory conversation repository and implements required protocol methods.
+    """
+
+    def __init__(self):
+        self.conversations = InMemoryConversationRepository()
+        self.repositories = {"conversations": self.conversations}
+        self.committed = False
+        self.rolled_back = False
+
+    async def collect_new_events(self) -> list[Any]:
+        """Collect domain events from aggregates for publishing."""
+        return []
+
+    async def __aenter__(self) -> "FakeUnitOfWork":
+        self.committed = False
+        self.rolled_back = False
+        # Re-initialize for better test isolation
+        self.conversations = InMemoryConversationRepository()
+        self.repositories = {"conversations": self.conversations}
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+        if exc:
+            await self.rollback()
+        # If no exception, commit() should have been called explicitly by the service.
+        # If not committed, the UoW pattern implies changes are discarded (rolled back).
+        # Our rollback flag is set by explicit calls, __aexit__ handles implicit rollback on error.
+
+    async def commit(self) -> None:
+        self.committed = True
+
+    async def rollback(self) -> None:
+        self.rolled_back = True

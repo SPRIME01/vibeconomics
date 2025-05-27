@@ -50,8 +50,7 @@ The initial phase focused on establishing a robust backend architecture based on
 5.  **General:**
     *   Minor type/import issues in the newly added code have been corrected.
 
-**Known Issue:**
-*   Pytest execution for `test_mem0_adapter.py` was previously blocked due to a file path resolution error in the testing environment. The test code itself, mocking the `mem0.Mem0` client, is expected to pass once this environment issue is fully resolved and tests can be discovered/run correctly. (Verify if still relevant).
+
 
 ### Pivot: Building an Internal "Fabric-Inspired" Orchestration Engine with LiteLLM
 
