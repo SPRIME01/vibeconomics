@@ -1,9 +1,11 @@
 import re
 from typing import Any
 
+from app.adapters.activepieces_adapter import ActivePiecesAdapter
 from app.service_layer.memory_service import AbstractMemoryService
 from app.service_layer.template_extensions import (
     TemplateExtensionRegistry,
+    create_activepieces_extensions,  # Added import
     create_memory_extensions,
 )
 
@@ -17,14 +19,27 @@ class MissingVariableError(ValueError):
 class TemplateService:
     """Service for processing templates with variable substitution and extensions."""
 
-    def __init__(self, memory_service: AbstractMemoryService | None = None):
+    def __init__(
+        self,
+        memory_service: AbstractMemoryService | None = None,
+        activepieces_adapter: ActivePiecesAdapter | None = None,  # Added parameter
+    ):
         self.memory_service = memory_service
+        self.activepieces_adapter = activepieces_adapter  # Store the adapter
         self.extension_registry = TemplateExtensionRegistry()
 
         # Register memory extensions if memory service is available
         if self.memory_service:
             memory_extensions = create_memory_extensions(self.memory_service)
             for name, func in memory_extensions.items():
+                self.extension_registry.register(name, func)
+
+        # Register ActivePieces extensions if adapter is available
+        if self.activepieces_adapter:  # Added this block
+            activepieces_extensions = create_activepieces_extensions(
+                self.activepieces_adapter
+            )
+            for name, func in activepieces_extensions.items():
                 self.extension_registry.register(name, func)
 
     async def render(

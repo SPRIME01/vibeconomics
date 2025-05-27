@@ -1,8 +1,9 @@
 import json  # Ensure json is imported at the top
 import re
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Dict
 
+from app.adapters.activepieces_adapter import ActivePiecesAdapter
 from app.adapters.mem0_adapter import (  # Assuming Mem0Adapter and MemoryWriteRequest are available here
     Mem0Adapter,
     MemoryWriteRequest,
@@ -186,6 +187,42 @@ def mem0_search_extension_function(
         return "[]"  # Return empty JSON array on error
 
 
+def activepieces_run_workflow(
+    activepieces_adapter: ActivePiecesAdapter, workflow_id: str, input_data_str: str
+) -> str:
+    """
+    Runs an ActivePieces workflow and returns the result as a JSON string.
+
+    Args:
+        activepieces_adapter: An instance of ActivePiecesAdapter.
+        workflow_id: The ID of the workflow to run.
+        input_data_str: A JSON string representing the input data for the workflow.
+
+    Returns:
+        A JSON string representing the result of the workflow execution,
+        or a JSON string with an error message if an error occurs.
+    """
+    try:
+        parsed_input_data: Dict[str, Any] = json.loads(input_data_str)
+    except json.JSONDecodeError as e:
+        # Use proper logging in a real application
+        # print(f"JSONDecodeError: {e}")
+        return json.dumps({"success": False, "error": f"Invalid JSON input: {e}"})
+
+    try:
+        result = activepieces_adapter.run_workflow(
+            workflow_id=workflow_id, input_data=parsed_input_data
+        )
+        return json.dumps(result)
+    except Exception as e:
+        # Use proper logging in a real application
+        # print(f"Workflow execution error: {e}")
+        # Consider more specific error handling based on adapter exceptions
+        return json.dumps(
+            {"success": False, "error": f"Failed to execute workflow: {e}"}
+        )
+
+
 class TemplateExtensionRegistry:
     """Registry for template extensions that can be called from templates."""
 
@@ -315,6 +352,37 @@ def create_memory_extensions(
     return {
         "memory_search": bound_memory_search,
         "memory_add": memory_add,
+    }
+
+
+def create_activepieces_extensions(
+    activepieces_adapter: ActivePiecesAdapter,
+) -> dict[str, Callable[..., str]]:
+    """
+    Create ActivePieces-related template extensions bound to an ActivePieces adapter.
+
+    Args:
+        activepieces_adapter: The ActivePieces adapter instance to use.
+
+    Returns:
+        Dictionary of extension functions.
+    """
+
+    def bound_activepieces_run_workflow(
+        workflow_id: str, input_data_str: str
+    ) -> str:
+        """
+        Bound version of activepieces_run_workflow that uses the provided adapter.
+        """
+        return activepieces_run_workflow(
+            activepieces_adapter, workflow_id, input_data_str
+        )
+
+    return {
+        "activepieces_run_workflow": bound_activepieces_run_workflow,
+        # This key will allow calling {{activepieces:run_workflow:...}}
+        # because TemplateExtensionRegistry.process_template_extensions
+        # combines namespace and operation with an underscore to look up the function.
     }
 
 
