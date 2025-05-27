@@ -18,6 +18,7 @@ A Port defines the abstract interface that the core application uses to interact
 - **Location:** Defined in the domain or service layer where it's needed
 - **Implementation:** Use Python's `abc.ABC` to create Abstract Base Classes
 - **Examples:**
+
   ```python
   class AbstractRepository(abc.ABC):
       @abc.abstractmethod
@@ -35,6 +36,7 @@ Adapters provide concrete implementations of Ports, translating between core app
 - **Location:** Live in the infrastructure/adapters layer
 - **Implementation:** Classes that inherit from and implement Port ABCs
 - **Examples:**
+
   ```python
   class SqlAlchemyRepository(AbstractRepository):
       def __init__(self, session: Session):
@@ -92,28 +94,24 @@ Adapters provide concrete implementations of Ports, translating between core app
    ```python
    # Conceptual Example (actual connection setup might vary based on application structure)
    import pika
-   import asyncio # For running async publish
    from app.adapters.rabbitmq_message_bus import RabbitMQMessageBus
    from app.core.base_aggregate import DomainEvent
-   # from app.config import settings # Assuming RabbitMQConfig is loaded via an app settings object
-   # from app.adapters.rabbitmq_config import RabbitMQConfig # For explicit config
 
    # --- Define a sample event ---
    class UserRegistered(DomainEvent):
        user_id: int
        email: str
-       # class Config: # Pydantic v1 style for arbitrary_types_allowed
-       #     arbitrary_types_allowed = True 
 
-   # --- Define a sample handler ---
-   async def handle_user_registered(event: UserRegistered):
-       # In a real application, this might be a synchronous function if not doing I/O
+   # --- Define a sample handler (must be synchronous for pika.BlockingConnection) ---
+   def handle_user_registered(event: UserRegistered):
+       # This handler is synchronous. If you need to perform async operations,
+       # see the note below.
        print(f"Handling UserRegistered event for user_id: {event.user_id}, email: {event.email}")
 
    # --- RabbitMQ Connection (example, typically managed by a factory or DI container) ---
    # Example:
    # rabbitmq_config = RabbitMQConfig(
-   #     host=settings.RABBITMQ_HOST, 
+   #     host=settings.RABBITMQ_HOST,
    #     port=settings.RABBITMQ_PORT,
    #     username=settings.RABBITMQ_USER, # Assuming these exist in settings
    #     password=settings.RABBITMQ_PASS,
@@ -135,9 +133,10 @@ Adapters provide concrete implementations of Ports, translating between core app
    # # --- Instantiate the bus (assuming a valid pika.BlockingConnection is provided) ---
    # # message_bus = RabbitMQMessageBus(connection=connection)
 
-   # # --- Register a handler ---
-   # # This would typically be done during application startup for each consumer.
-   # # message_bus.register_handler(UserRegistered, handle_user_registered)
+   # --- Register a handler ---
+   # Handlers registered with RabbitMQMessageBus must be synchronous functions.
+   # Do not use 'async def' handlers unless you manage the event loop yourself.
+   message_bus.register_handler(UserRegistered, handle_user_registered)
 
    # # --- Publish an event ---
    # async def publish_example():
@@ -153,7 +152,7 @@ Adapters provide concrete implementations of Ports, translating between core app
    # # def start_consumer_process():
    # #     # (connection and bus setup as above)
    # #     message_bus.register_handler(UserRegistered, handle_user_registered)
-   # #     
+   # #
    # #     # Get a channel from the connection for this consumer.
    # #     # The RabbitMQMessageBus itself creates channels for operations, but for a
    # #     # long-running consumer, you might manage a channel explicitly or use
@@ -192,13 +191,33 @@ Adapters provide concrete implementations of Ports, translating between core app
    # #     # start_consumer_process()
    # #     pass
    ```
-   **Note on Consumers:** Consumer processes are typically long-running services. After handlers are registered with the `RabbitMQMessageBus`, the consumer process needs to ensure that Pika's I/O loop is running to receive and process messages. For `pika.BlockingConnection`, this might involve calling `connection.process_data_events()` periodically if not using `channel.start_consuming()` in a dedicated thread, or managing a consuming channel directly. The `register_handler` method in `RabbitMQMessageBus` already sets up `basic_consume`.
 
-   **Best Practices for RabbitMQ in this Project:**
-   - **Persistent Messages:** Events are published with `delivery_mode=PERSISTENT_DELIVERY_MODE` to ensure they are saved to disk and survive broker restarts. This is handled by `RabbitMQMessageBus.publish`.
-   - **Fast Consumers & Idempotent Handlers:** Design event handlers to be quick and idempotent. Idempotency means that processing the same event multiple times does not result in unintended side effects or incorrect state. This is crucial because, despite manual ACKs, network issues or consumer crashes might lead to redeliveries.
-   - **Monitoring:** Regularly monitor RabbitMQ queue lengths, message rates, and consumer activity to ensure the system is healthy and processing events efficiently. Use RabbitMQ's management plugin or other monitoring tools.
-   - **Manual Acknowledgments:** The `RabbitMQMessageBus` uses manual message acknowledgments (`auto_ack=False`). Handlers must successfully process an event before an ACK is sent. If processing fails, a NACK is sent, and the message (by default, with current setup) will not be re-queued, preventing poison pills from blocking queues indefinitely. Dead Letter Exchanges (DLX) can be configured on RabbitMQ for messages that are NACKed without requeue.
+   **Note on Asynchronous Handlers:**
+
+   `RabbitMQMessageBus` uses `pika.BlockingConnection`, which expects synchronous callbacks for message consumption. If you register an `async def` handler, Pika will call it as a regular function, returning a coroutine object that will not be awaited or executed. This means your async handler will not run as intended.
+
+   If you need to perform asynchronous operations in a handler, you have two options:
+   1. **Delegate to a thread pool or run the coroutine in a new event loop:**
+      You can use `asyncio.run()` or `asyncio.get_event_loop().run_until_complete()` inside the synchronous handler, but this is generally discouraged unless you are certain about event loop management and thread safety.
+   2. **Offload work to a background thread or task queue:**
+      For I/O-bound or async work, consider submitting the task to a thread pool or a background worker.
+
+   **Best Practice:**
+   Write synchronous handler functions for use with `RabbitMQMessageBus` and `pika.BlockingConnection`. If you need to call async code, wrap it appropriately:
+
+   ```python
+   import asyncio
+
+   def handle_user_registered(event: UserRegistered):
+       # If you must call async code, do so explicitly:
+       asyncio.run(async_handler(event))  # Not recommended if already in an event loop
+
+   async def async_handler(event: UserRegistered):
+       # ...async logic...
+       pass
+   ```
+
+   However, for most use cases, keep handlers synchronous to avoid event loop issues.
 
 3. **API Client Adapters**
    - Interact with external services
