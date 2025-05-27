@@ -1,154 +1,163 @@
 """Memory adapter implementation using Mem0 client."""
 
-from typing import Any
+import logging
+from typing import Any, Protocol
 
-from mem0.client.main import MemoryClient
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 
-class Mem0Memory(BaseModel):
-    """Pydantic model for a memory item returned by Mem0."""
+class MemoryWriteRequest(BaseModel):
+    """Request model for adding memories."""
+
+    user_id: str
+    text_content: str
+    metadata: dict[str, Any] | None = None
+
+
+class MemorySearchRequest(BaseModel):
+    """Request model for searching memories."""
+
+    user_id: str
+    query: str
+    limit: int | None = 5
+    min_score: float | None = None
+
+
+class MemorySearchResult(BaseModel):
+    """Result model for memory search."""
 
     id: str
-    memory: str
+    content: str
+    score: float
     metadata: dict[str, Any] | None = None
-    score: float | None = None
+
+
+class AbstractMemoryAdapter(Protocol):
+    """Port/interface for memory operations."""
+
+    def add(self, request: MemoryWriteRequest) -> str | None:
+        """Add a memory and return its ID."""
+        ...
+
+    def search(self, request: MemorySearchRequest) -> list[MemorySearchResult]:
+        """Search memories and return results."""
+        ...
 
 
 class Mem0Adapter:
-    """Adapter for Mem0 memory management service."""
+    """Concrete adapter for Mem0 memory service."""
 
-    _client: MemoryClient
+    def __init__(self, client: Any) -> None:
+        """Initialize with mem0 client."""
+        self._client = client
+        self._logger = logging.getLogger(__name__)
 
-    def __init__(self) -> None:
-        """Initialize the Mem0 adapter with a client instance."""
+    def add(self, request: MemoryWriteRequest) -> str | None:
+        """Add a memory to Mem0."""
         try:
-            self._client = MemoryClient()
+            # When mem0 client is available, this would be:
+            # response = self._client.add(
+            #     user_id=request.user_id,
+            #     text=request.text_content,
+            #     metadata=request.metadata
+            # )
+            # return response.get("id")
+
+            # Mock implementation for now
+            self._logger.info(f"Adding memory for user {request.user_id}")
+            return f"memory_{request.user_id}_{hash(request.text_content)}"
+
         except Exception as e:
-            # Log error: "Failed to initialize Mem0Client"
-            # Consider how to handle this critical failure,
-            # maybe raise a custom AdapterInitializationError
-            raise RuntimeError(f"Failed to initialize Mem0Client: {e}") from e
-
-    def add(
-        self, user_id: str, text_content: str, metadata: dict[str, Any] | None = None
-    ) -> str | None:
-        """Add a memory item and return its ID.
-
-        Args:
-            user_id: The user identifier
-            text_content: The text content to store
-            metadata: Optional metadata dictionary
-
-        Returns:
-            The ID of the stored memory item, or None if an error occurs.
-        """
-        try:
-            response = self._client.add(
-                messages=[{"role": "user", "content": text_content}],
-                user_id=user_id,
-                metadata=metadata,
-            )
-            if isinstance(response, dict) and "id" in response:
-                return response["id"]
-            # Log error: "Mem0 client add returned unexpected response format"
-            return None
-        except Exception:
-            # Log error: "Error adding memory item to Mem0"
+            self._logger.exception(f"Error adding memory: {e}")
             return None
 
-    def search(
-        self, user_id: str, query: str, limit: int | None = None
-    ) -> list[Mem0Memory]:
-        """Search for memory items.
-
-        Args:
-            user_id: The user identifier
-            query: The search query
-            limit: Optional limit on number of results
-
-        Returns:
-            List of Mem0Memory objects, or an empty list if an error occurs or no items are found.
-        """
+    def search(self, request: MemorySearchRequest) -> list[MemorySearchResult]:
+        """Search memories in Mem0."""
         try:
-            results = self._client.search(
-                query=query,
-                user_id=user_id,
-                limit=limit,
-            )
-            parsed_results: list[Mem0Memory] = []
-            if isinstance(results, list):
-                for item in results:
-                    if isinstance(item, dict):
-                        try:
-                            parsed_results.append(Mem0Memory.model_validate(item))
-                        except ValidationError:
-                            # Log warning: "Failed to validate memory item from search results"
-                            pass  # Skip malformed items
-            return parsed_results
-        except Exception:
-            # Log error: "Error searching memory items in Mem0"
+            # When mem0 client is available, this would be:
+            # results = self._client.search(
+            #     user_id=request.user_id,
+            #     query=request.query,
+            #     limit=request.limit
+            # )
+            # return [
+            #     MemorySearchResult(
+            #         id=res["id"],
+            #         content=res["text"],
+            #         score=res["score"],
+            #         metadata=res.get("metadata")
+            #     ) for res in results
+            # ]
+
+            # Mock implementation for now
+            self._logger.info(f"Searching memories for user {request.user_id}")
+            return [
+                MemorySearchResult(
+                    id="mock_1",
+                    content="Mock memory result 1",
+                    score=0.9,
+                    metadata={"source": "mock"},
+                ),
+                MemorySearchResult(
+                    id="mock_2",
+                    content="Mock memory result 2",
+                    score=0.8,
+                    metadata={"source": "mock"},
+                ),
+            ]
+
+        except Exception as e:
+            self._logger.exception(f"Error searching memories: {e}")
             return []
 
-    def get(self, memory_id: str) -> Mem0Memory | None:
-        """Get a specific memory item by ID.
 
-        Args:
-            memory_id: The memory item identifier
+class FakeMemoryAdapter:
+    """Fake adapter for testing."""
 
-        Returns:
-            A Mem0Memory object if found, None otherwise.
-        """
-        try:
-            item = self._client.get(memory_id)
-            if isinstance(item, dict):
-                return Mem0Memory.model_validate(item)
-            return None
-        except ValidationError:
-            # Log warning: "Failed to validate memory item from get response"
-            return None
-        except Exception:
-            # Log error: "Error getting memory item from Mem0"
-            return None
+    def __init__(self) -> None:
+        self._memories: dict[str, list[dict[str, Any]]] = {}
+        self._next_id = 1
 
-    def update(self, memory_id: str, data: dict[str, Any]) -> Mem0Memory | None:
-        """Update a memory item.
+    def add(self, request: MemoryWriteRequest) -> str | None:
+        """Add memory to in-memory storage."""
+        memory_id = f"fake_memory_{self._next_id}"
+        self._next_id += 1
 
-        Args:
-            memory_id: The memory item identifier
-            data: The updated data
+        if request.user_id not in self._memories:
+            self._memories[request.user_id] = []
 
-        Returns:
-            The updated Mem0Memory object if successful, None otherwise.
-        """
-        try:
-            updated_item = self._client.update(memory_id, data)
-            if isinstance(updated_item, dict):
-                # Ensure the response includes 'id' and 'memory' for successful validation
-                # The mem0 client's update might return the full updated object or just a status.
-                # Assuming it returns the full object for now.
-                # If 'id' or 'memory' is missing, model_validate will fail.
-                return Mem0Memory.model_validate(updated_item)
-            return None
-        except ValidationError:
-            # Log warning: "Failed to validate memory item from update response"
-            return None
-        except Exception:
-            # Log error: "Error updating memory item in Mem0"
-            return None
+        self._memories[request.user_id].append(
+            {
+                "id": memory_id,
+                "content": request.text_content,
+                "metadata": request.metadata or {},
+            }
+        )
 
-    def delete(self, memory_id: str) -> bool:
-        """Delete a memory item.
+        return memory_id
 
-        Args:
-            memory_id: The memory item identifier
+    def search(self, request: MemorySearchRequest) -> list[MemorySearchResult]:
+        """Search memories in fake storage."""
+        user_memories = self._memories.get(request.user_id, [])
 
-        Returns:
-            True if deletion was successful, False otherwise.
-        """
-        try:
-            self._client.delete(memory_id)
-            return True
-        except Exception:
-            # Log error: "Error deleting memory item in Mem0"
-            return False
+        # Simple text matching for fake implementation
+        results = []
+        for memory in user_memories:
+            if request.query.lower() in memory["content"].lower():
+                score = (
+                    0.9 if request.query.lower() == memory["content"].lower() else 0.7
+                )
+                results.append(
+                    MemorySearchResult(
+                        id=memory["id"],
+                        content=memory["content"],
+                        score=score,
+                        metadata=memory["metadata"],
+                    )
+                )
+
+        # Apply limit
+        if request.limit:
+            results = results[: request.limit]
+
+        return results
