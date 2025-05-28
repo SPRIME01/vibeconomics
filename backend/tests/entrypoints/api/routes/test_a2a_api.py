@@ -84,13 +84,11 @@ def test_execute_summarize_text_capability(
     # We need to ensure the call_args match what the endpoint would send
     mock_a2a_handler_service.handle_a2a_request.assert_called_once()
     call_args = mock_a2a_handler_service.handle_a2a_request.call_args
-    assert call_args[1]['capability_name'] == "SummarizeText"
-    
+    assert call_args.args[0] == "SummarizeText"
+
     # The 'data' argument in the mock call will be an instance of SummarizeTextA2ARequest
-    # because the actual router parses the request_data using capability.input_schema.
     assert isinstance(call_args[1]['data'], SummarizeTextA2ARequest)
     assert call_args[1]['data'].text_to_summarize == "This is a test."
-
 # The actual router's handle_a2a_request call does not pass 'capability_metadata'.
 # It passes 'capability_name' and 'data'.
 # So, this assertion needs to be removed or changed if we adapt the mock call.
