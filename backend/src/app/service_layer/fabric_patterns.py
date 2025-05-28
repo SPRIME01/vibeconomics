@@ -15,9 +15,11 @@ class RemoteTaskResponse(BaseModel):
 
 
 class CollaborativeRAGModule(dspy.Module):
-    def __init__(self, a2a_adapter: A2AClientAdapter):
+    def __init__(self, a2a_adapter: A2AClientAdapter, remote_agent_url: str, remote_capability_name: str):
         super().__init__()
         self.a2a_adapter = a2a_adapter
+        self.remote_agent_url = remote_agent_url
+        self.remote_capability_name = remote_capability_name
         # For now, we'll include a simple dspy.Predict signature
         self.generate_query = dspy.Predict("input_question -> query_for_remote_agent")
 
