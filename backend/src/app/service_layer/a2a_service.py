@@ -28,7 +28,7 @@ class A2ACapabilityService:
         return list(self.capabilities.values())
 
 
-class A2AHandlerService(BaseModel): # Or just a regular class if no Pydantic features needed for the service itself
+class A2AHandlerService:
     """
     Placeholder service for handling A2A requests.
     The actual implementation of this service is not part of this subtask.
