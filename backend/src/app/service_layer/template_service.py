@@ -27,6 +27,11 @@ class TemplateService:
         activepieces_adapter: AbstractActivePiecesAdapter | None = None,
         a2a_client_adapter: A2AClientAdapter | None = None, # Add a2a_client_adapter
     ) -> None:
+        """
+        Initializes the TemplateService with optional adapters for memory, Activepieces, and A2A client extensions.
+        
+        Registers available template extensions from the provided adapters for use in template processing.
+        """
         self.memory_service = memory_service
         self.activepieces_adapter = activepieces_adapter
         self.a2a_client_adapter = a2a_client_adapter # Store it
@@ -36,7 +41,11 @@ class TemplateService:
         self._register_extensions()
 
     def _register_extensions(self) -> None:
-        """Register available template extensions."""
+        """
+        Registers template extensions from available adapters.
+        
+        Adds memory, activepieces, and A2A client extensions to the extension registry if their corresponding adapters are provided during initialization.
+        """
         if self.memory_service:
             memory_extensions = create_memory_extensions(self.memory_service)
             for name, func in memory_extensions.items():
@@ -62,17 +71,15 @@ class TemplateService:
         context_data: dict[str, Any] | None = None, # Renamed from context to context_data for clarity
     ) -> str:
         """
-        Render a template with variables and optional context_data.
-
+        Renders a template string by substituting variables and processing registered extensions asynchronously.
+        
         Args:
-            template: Template string with {{variable}} and {{extension:operation:args}} syntax
-            variables: Dictionary of variables to substitute
-            context_data: Optional context_data containing services like memory_service or a2a_client_adapter
-                          which might be used to dynamically update/register extensions if needed.
-                          However, the primary way to provide adapters is via __init__.
-
+            template: The template string containing variable placeholders and extension calls.
+            variables: A dictionary mapping variable names to their values for substitution.
+            context_data: Optional dictionary for additional context; currently not used for dynamic extension registration.
+        
         Returns:
-            Rendered template string
+            The rendered template string with variables and extensions processed.
         """
         # Note: The logic for dynamically registering extensions based on context_data
         # for memory_service was present. If a2a_client_adapter can also be passed this way,

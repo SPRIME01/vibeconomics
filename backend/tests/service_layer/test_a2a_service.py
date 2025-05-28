@@ -12,6 +12,11 @@ def a2a_capability_service() -> A2ACapabilityService:
 
 
 def test_register_and_get_capability(a2a_capability_service: A2ACapabilityService):
+    """
+    Tests that a capability can be registered and then retrieved with correct metadata.
+    
+    Registers a capability with specific name, description, input, and output schemas, then retrieves it to verify that all attributes match the registered values.
+    """
     capability_metadata = CapabilityMetadata(
         name="SummarizeText",
         description="Summarizes a given text.",
@@ -31,6 +36,11 @@ def test_register_and_get_capability(a2a_capability_service: A2ACapabilityServic
 
 def test_reregister_capability_overwrites(a2a_capability_service: A2ACapabilityService):
     # Register the initial capability
+    """
+    Tests that re-registering a capability with the same name overwrites the existing capability's metadata.
+    
+    Registers a capability, then registers another with the same name but a different description. Verifies that the capability's description is updated and that the new registration replaces the previous one.
+    """
     capability_metadata_1 = CapabilityMetadata(
         name="SummarizeText",
         description="Summarizes a given text.",
@@ -63,6 +73,9 @@ def test_get_nonexistent_capability(a2a_capability_service: A2ACapabilityService
 
 
 def test_list_capabilities(a2a_capability_service: A2ACapabilityService):
+    """
+    Tests that multiple capabilities can be registered and that list_capabilities returns all registered capabilities with correct names.
+    """
     capability1_metadata = CapabilityMetadata(
         name="SummarizeText",
         description="Summarizes a given text.",

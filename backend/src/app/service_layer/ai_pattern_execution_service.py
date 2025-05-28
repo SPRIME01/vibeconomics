@@ -30,6 +30,11 @@ class AIPatternExecutionService:
         memory_service: AbstractMemoryService | None = None,
         a2a_client_adapter: A2AClientAdapter | None = None, # Add a2a_client_adapter
     ):
+        """
+        Initializes the AI pattern execution service with required dependencies.
+        
+        This constructor sets up the service with pattern, template, strategy, context, and AI provider services, as well as a unit of work. Optionally, it can also accept a memory service and an A2A client adapter for enhanced prompt rendering and context management.
+        """
         self.pattern_service = pattern_service
         self.template_service = template_service
         self.strategy_service = strategy_service
@@ -49,6 +54,25 @@ class AIPatternExecutionService:
         model_name: str | None = None,
         output_model: type[BaseModel] | None = None,
     ) -> Any:
+        """
+        Executes an AI pattern by assembling prompt components, rendering the prompt, invoking AI completion, and managing conversation state.
+        
+        Args:
+            pattern_name: The name of the AI pattern to execute.
+            input_variables: Input variables for prompt rendering.
+            session_id: Optional conversation session identifier for context continuity.
+            strategy_name: Optional strategy to influence prompt construction.
+            context_name: Optional context to include in the prompt.
+            model_name: Optional AI model name to use for completion.
+            output_model: Optional Pydantic model type for structured output parsing.
+        
+        Returns:
+            The AI response as a parsed Pydantic model if `output_model` is provided and parsing succeeds; otherwise, the raw AI response string.
+        
+        Raises:
+            EmptyRenderedPromptError: If the rendered prompt is empty or contains only whitespace.
+            ValidationError: If parsing the AI response into the provided output model fails.
+        """
         conversation: Conversation | None = None
         prompt_parts: list[str] = []
 

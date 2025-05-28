@@ -10,10 +10,10 @@ class A2AClientAdapter:
     """
     def __init__(self, http_client: httpx.AsyncClient):
         """
-        Initializes the A2AClientAdapter.
-
+        Initializes the A2AClientAdapter with an asynchronous HTTP client.
+        
         Args:
-            http_client: An instance of httpx.AsyncClient for making HTTP requests.
+            http_client: The httpx.AsyncClient instance used for making asynchronous HTTP requests to remote agents.
         """
         self.http_client = http_client
 
@@ -25,24 +25,24 @@ class A2AClientAdapter:
         response_model: Type[BaseModel] | None = None, # Made optional
     ) -> BaseModel | dict: # Return type updated
         """
-        Executes a remote capability on another agent.
-
+        Invokes a remote capability on another agent via an asynchronous HTTP POST request.
+        
+        Sends a JSON-encoded request payload to the specified agent's capability endpoint and returns the response as either a Pydantic model instance (if `response_model` is provided) or a raw dictionary. Raises detailed exceptions for HTTP errors, network issues, invalid JSON responses, and response validation failures.
+        
         Args:
-            agent_url: The base URL of the target agent.
-            capability_name: The name of the capability to execute.
-            request_payload: The Pydantic model instance for the request payload.
-            response_model: Optional Pydantic model type to deserialize the response into.
-                           If None, the raw JSON dictionary is returned.
-
+            agent_url: Base URL of the target agent.
+            capability_name: Name of the capability to invoke.
+            request_payload: Pydantic model instance representing the request data.
+            response_model: Optional Pydantic model type for deserializing the response.
+        
         Returns:
-            A Pydantic model instance if `response_model` is provided, 
-            otherwise a dictionary containing the response data.
-
+            A Pydantic model instance if `response_model` is provided; otherwise, a dictionary containing the raw JSON response.
+        
         Raises:
-            httpx.HTTPStatusError: If the remote server returns an HTTP error status (4xx or 5xx).
-            httpx.NetworkError: If a network error occurs (e.g., DNS failure, connection refused).
-            ValidationError: If the response payload cannot be validated against `response_model`.
-            RuntimeError: For other unexpected errors, such as JSON decoding issues.
+            httpx.HTTPStatusError: If the HTTP response status is an error (4xx or 5xx).
+            httpx.NetworkError: If a network-related error occurs.
+            ValidationError: If the response cannot be validated against `response_model`.
+            RuntimeError: For invalid JSON responses or other unexpected errors.
         """
         url = f"{agent_url.rstrip('/')}/a2a/execute/{capability_name}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
