@@ -80,16 +80,16 @@ class AIPatternExecutionService:
         module_signature_params = inspect.signature(module_class.__init__).parameters
 
         if "a2a_adapter" in module_signature_params:
+            a2a_param = module_signature_params["a2a_adapter"]
+            has_default = a2a_param.default is not inspect.Parameter.empty
             if self.a2a_client_adapter:
                 constructor_args["a2a_adapter"] = self.a2a_client_adapter
-            else:
-                # Module requires a2a_adapter, but service doesn't have one.
-                # This could be an error or handled based on module's specific needs
-                # if a2a_adapter is optional in the module's __init__.
-                # For now, let's assume if it's in __init__, it's needed.
+            elif not has_default:
+                # Module requires a2a_adapter (no default), but service doesn't have one.
                 raise AttributeError(
                     f"{module_class.__name__} requires an 'a2a_adapter', but it's not available in AIPatternExecutionService."
                 )
+            # else: a2a_adapter is optional, so do nothing
         
         # Note on LLM Configuration for DSPy:
         # DSPy modules require an LLM to be configured via dspy.settings.configure(lm=your_lm).
