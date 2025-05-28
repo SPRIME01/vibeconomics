@@ -3,13 +3,7 @@ from pydantic import BaseModel
 from typing import Type
 
 
-class SummarizeTextA2ARequest(BaseModel):
-    text_to_summarize: str
-
-
-class SummarizeTextA2AResponse(BaseModel):
-    summary: str
-
+from app.domain.a2a.models import SummarizeTextA2ARequest, SummarizeTextA2AResponse
 
 def test_summarize_text_a2a_request_serialization_deserialization():
     original_request = SummarizeTextA2ARequest(text_to_summarize="This is a long text that needs summarization.")
