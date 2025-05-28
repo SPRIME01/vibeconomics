@@ -9,16 +9,32 @@ import { CopilotProviderDecorator } from '../../.storybook/copilot-decorator'; /
 const MOCK_API_BASE = '/api'; // Using a relative path for MSW
 
 const createTaskSuccess = rest.post(`${MOCK_API_BASE}/tasks`, async (req, res, ctx) => {
-  const { title, description } = await req.json() as { title: string, description?: string };
-  return res(
-    ctx.status(201), 
-    ctx.json({ 
-      id: `tskmsw_${Date.now()}`, 
-      title, 
-      description: description || 'No description', 
-      status: 'success' 
-    })
-  );
+  try {
+    const body = await req.json();
+    const { title, description } = body as { title: string, description?: string };
+    
+    if (!title || typeof title !== 'string') {
+      return res(
+        ctx.status(400),
+        ctx.json({ message: 'Title is required and must be a string' })
+      );
+    }
+    
+    return res(
+      ctx.status(201),
+      ctx.json({
+        id: `tskmsw_${Date.now()}`,
+        title,
+        description: description || 'No description',
+        status: 'success'
+      })
+    );
+  } catch (error) {
+    return res(
+      ctx.status(400),
+      ctx.json({ message: 'Invalid JSON in request body' })
+    );
+  }
 });
 
 const createTaskError = rest.post(`${MOCK_API_BASE}/tasks`, (req, res, ctx) => {
