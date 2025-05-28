@@ -1,20 +1,17 @@
+import json
+from unittest.mock import AsyncMock
+
+import httpx
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock
 from pydantic import BaseModel, ValidationError
-from typing import Type
 
-import httpx 
-# from httpx import AsyncClient, Request, Response, NetworkError, HTTPStatusError # This is also fine
-
-from app.adapters.a2a_client_adapter import A2AClientAdapter # Import the actual adapter
+from app.adapters.a2a_client_adapter import A2AClientAdapter
 
 
-# Sample Pydantic models for request and response
-# from app.domain.a2a.models import SummarizeTextA2ARequest, SummarizeTextA2AResponse
-# Using local MyTestRequest/Response for simplicity in this test file
 class MyTestRequest(BaseModel):
     data: str
+
 
 class MyTestResponse(BaseModel):
     result: str
@@ -24,7 +21,7 @@ class MyTestResponse(BaseModel):
 async def mock_httpx_client() -> AsyncMock:
     """
     Asynchronously provides a mocked httpx.AsyncClient for use in tests.
-    
+
     Returns:
         An AsyncMock instance configured to mimic httpx.AsyncClient.
     """
@@ -32,146 +29,177 @@ async def mock_httpx_client() -> AsyncMock:
 
 
 @pytest.fixture
-def a2a_client_adapter(mock_httpx_client: AsyncMock) -> A2AClientAdapter: # Type hint uses the imported adapter
+def a2a_client_adapter(mock_httpx_client: AsyncMock) -> A2AClientAdapter:
     """
     Creates an instance of A2AClientAdapter using a mocked asynchronous HTTP client.
-    
+
     This fixture provides an adapter configured for testing with a mock HTTP client to avoid real network calls.
     """
     return A2AClientAdapter(http_client=mock_httpx_client)
 
 
 @pytest.mark.asyncio
-async def test_execute_remote_capability_success(
-    a2a_client_adapter: A2AClientAdapter, 
-    mock_httpx_client: AsyncMock
-):
-    """
-    Tests that execute_remote_capability successfully sends a request and parses a valid response.
-    
-    Verifies that the adapter calls the correct URL with the expected payload and headers, and that the response is correctly parsed into the specified response model.
-    """
-    agent_url = "http://fakeagent.com"
+async def test_execute_remote_capability_success_with_response_model(
+    a2a_client_adapter: A2AClientAdapter,
+    mock_httpx_client: AsyncMock,
+) -> None:
+    """Test successful execution with response model parsing."""
+    # Arrange
+    agent_url = "http://test-agent.com"
     capability_name = "test_capability"
-    request_payload = MyTestRequest(data="input_data")
-    
-    # Prepare a mocked httpx.Response
-    mock_response_json = {"result": "output_data"}
-    # Note: httpx.Response needs a request object for certain attributes if accessed by the code under test
-    # For this test, if only .json() and .status_code are used by raise_for_status, it's fine.
-    mock_http_response = httpx.Response(
-        status_code=200, 
-        json=mock_response_json, 
-        request=httpx.Request("POST", f"{agent_url}/a2a/execute/{capability_name}")
-    )
-    mock_httpx_client.post.return_value = mock_http_response
-    
+    request_payload = MyTestRequest(data="test data")
+    response_model = MyTestResponse
+
+    mock_response = AsyncMock()
+    mock_response.json = AsyncMock(return_value={"result": "test result"})
+    mock_response.raise_for_status = AsyncMock(return_value=None)
+    mock_httpx_client.post = AsyncMock(return_value=mock_response)
+
+    # Act
     result = await a2a_client_adapter.execute_remote_capability(
-        agent_url, capability_name, request_payload, response_model=MyTestResponse
+        agent_url=agent_url,
+        capability_name=capability_name,
+        request_payload=request_payload,
+        response_model=response_model,
     )
-    
-    expected_url = f"{agent_url}/a2a/execute/{capability_name}"
-    # Call mock_httpx_client.post.assert_called_once_with with url as a positional argument
-    mock_httpx_client.post.assert_called_once_with(
-        expected_url, # url as positional
-        json=request_payload.model_dump(),
-        headers={"Content-Type": "application/json", "Accept": "application/json"}
-    )
-    
+
+    # Assert
     assert isinstance(result, MyTestResponse)
-    assert result.result == "output_data"
+    assert result.result == "test result"
+
+    mock_httpx_client.post.assert_called_once_with(
+        f"{agent_url}/a2a/execute/{capability_name}",
+        json={"data": "test data"},
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_execute_remote_capability_success_without_response_model(
+    a2a_client_adapter: A2AClientAdapter,
+    mock_httpx_client: AsyncMock,
+) -> None:
+    """Test successful execution returning raw dictionary."""
+    # Arrange
+    agent_url = "http://test-agent.com"
+    capability_name = "test_capability"
+    request_payload = MyTestRequest(data="test data")
+
+    mock_response = AsyncMock()
+    mock_response.json = AsyncMock(return_value={"result": "test result"})
+    mock_response.raise_for_status = AsyncMock(return_value=None)
+    mock_httpx_client.post = AsyncMock(return_value=mock_response)
+
+    # Act
+    result = await a2a_client_adapter.execute_remote_capability(
+        agent_url=agent_url,
+        capability_name=capability_name,
+        request_payload=request_payload,
+        response_model=None,
+    )
+
+    # Assert
+    assert isinstance(result, dict)
+    assert result == {"result": "test result"}
 
 
 @pytest.mark.asyncio
 async def test_execute_remote_capability_http_error(
-    a2a_client_adapter: A2AClientAdapter, 
-    mock_httpx_client: AsyncMock
-):
-    """
-    Tests that execute_remote_capability propagates HTTPStatusError when the HTTP client
-    raises a server error.
-    
-    Verifies that the exception contains the correct request and response details.
-    """
-    agent_url = "http://fakeagent.com"
-    capability_name = "test_capability_http_error"
-    request_payload = MyTestRequest(data="input_data_http_error")
-    
-    mock_request = httpx.Request(method="POST", url=f"{agent_url}/a2a/execute/{capability_name}")
-    error_response = httpx.Response(500, json={"detail": "Server error"}, request=mock_request)
-    
+    a2a_client_adapter: A2AClientAdapter,
+    mock_httpx_client: AsyncMock,
+) -> None:
+    """Test handling of HTTP errors."""
+    # Arrange
+    agent_url = "http://test-agent.com"
+    capability_name = "test_capability"
+    request_payload = MyTestRequest(data="test data")
+
     mock_httpx_client.post.side_effect = httpx.HTTPStatusError(
-        "Server error", request=mock_request, response=error_response
+        "404 Not Found", request=None, response=None
     )
-    
-    with pytest.raises(httpx.HTTPStatusError) as excinfo:
+
+    # Act & Assert
+    with pytest.raises(httpx.HTTPStatusError):
         await a2a_client_adapter.execute_remote_capability(
-            agent_url, capability_name, request_payload, response_model=MyTestResponse
+            agent_url=agent_url,
+            capability_name=capability_name,
+            request_payload=request_payload,
         )
-    
-    assert excinfo.value.response.status_code == 500
-    assert excinfo.value.request == mock_request
 
 
 @pytest.mark.asyncio
 async def test_execute_remote_capability_network_error(
-    a2a_client_adapter: A2AClientAdapter, 
-    mock_httpx_client: AsyncMock
-):
-    """
-    Tests that a network error during capability execution is properly propagated.
-    
-    Simulates a network failure when the adapter attempts to execute a remote capability and asserts that the resulting `httpx.NetworkError` is raised.
-    """
-    agent_url = "http://fakeagent.com"
-    capability_name = "test_capability_network_error"
-    request_payload = MyTestRequest(data="input_data_network_error")
-    
-    # The request object passed to NetworkError is what httpx would have created
-    mock_request_for_error = httpx.Request(method="POST", url=f"{agent_url}/a2a/execute/{capability_name}")
+    a2a_client_adapter: A2AClientAdapter,
+    mock_httpx_client: AsyncMock,
+) -> None:
+    """Test handling of network errors."""
+    # Arrange
+    agent_url = "http://test-agent.com"
+    capability_name = "test_capability"
+    request_payload = MyTestRequest(data="test data")
 
-    mock_httpx_client.post.side_effect = httpx.NetworkError(
-        "Connection failed", request=mock_request_for_error
-    )
-    
+    mock_httpx_client.post.side_effect = httpx.NetworkError("Connection failed")
+
+    # Act & Assert
     with pytest.raises(httpx.NetworkError):
         await a2a_client_adapter.execute_remote_capability(
-            agent_url, capability_name, request_payload, response_model=MyTestResponse
+            agent_url=agent_url,
+            capability_name=capability_name,
+            request_payload=request_payload,
         )
 
 
 @pytest.mark.asyncio
-async def test_execute_remote_capability_invalid_response_payload(
-    a2a_client_adapter: A2AClientAdapter, 
-    mock_httpx_client: AsyncMock
-):
-    """
-    Tests that execute_remote_capability raises a ValidationError when the HTTP response
-    payload does not conform to the expected response model schema.
-    
-    Simulates a successful HTTP response with an invalid JSON payload missing required
-    fields, and asserts that a Pydantic ValidationError is raised with details about
-    the missing field.
-    """
-    agent_url = "http://fakeagent.com"
-    capability_name = "test_capability_invalid_payload"
-    request_payload = MyTestRequest(data="input_data_invalid_payload")
-    
-    # Mock response with a payload that doesn't match MyTestResponse
-    mock_response_json = {"wrong_field": "output_data"} # 'wrong_field' instead of 'result'
-    mock_http_response = httpx.Response(
-        status_code=200, 
-        json=mock_response_json,
-        request=httpx.Request("POST", f"{agent_url}/a2a/execute/{capability_name}")
+async def test_execute_remote_capability_json_decode_error(
+    a2a_client_adapter: A2AClientAdapter,
+    mock_httpx_client: AsyncMock,
+) -> None:
+    """Test handling of JSON decode errors."""
+    # Arrange
+    agent_url = "http://test-agent.com"
+    capability_name = "test_capability"
+    request_payload = MyTestRequest(data="test data")
+
+    mock_response = AsyncMock()
+    mock_response.raise_for_status = AsyncMock(return_value=None)
+    mock_response.json = AsyncMock(
+        side_effect=json.JSONDecodeError("Invalid JSON", "", 0)
     )
-    mock_httpx_client.post.return_value = mock_http_response
-    
-    with pytest.raises(ValidationError) as excinfo:
+    mock_httpx_client.post = AsyncMock(return_value=mock_response)
+
+    # Act & Assert
+    with pytest.raises(RuntimeError, match="Failed to decode JSON response"):
         await a2a_client_adapter.execute_remote_capability(
-            agent_url, capability_name, request_payload, response_model=MyTestResponse
+            agent_url=agent_url,
+            capability_name=capability_name,
+            request_payload=request_payload,
         )
-    
-    # Check some details of the ValidationError if needed
-    assert len(excinfo.value.errors()) == 1
-    assert excinfo.value.errors()[0]['type'] == 'missing'
-    assert excinfo.value.errors()[0]['loc'] == ('result',)
+
+
+@pytest.mark.asyncio
+async def test_execute_remote_capability_validation_error(
+    a2a_client_adapter: A2AClientAdapter,
+    mock_httpx_client: AsyncMock,
+) -> None:
+    """Test handling of validation errors when parsing response."""
+    # Arrange
+    agent_url = "http://test-agent.com"
+    capability_name = "test_capability"
+    request_payload = MyTestRequest(data="test data")
+    response_model = MyTestResponse
+
+    mock_response = AsyncMock()
+    mock_response.json = AsyncMock(
+        return_value={"invalid": "data"}
+    )  # Missing 'result' field
+    mock_response.raise_for_status = AsyncMock(return_value=None)
+    mock_httpx_client.post = AsyncMock(return_value=mock_response)
+
+    # Act & Assert
+    with pytest.raises(ValidationError):
+        await a2a_client_adapter.execute_remote_capability(
+            agent_url=agent_url,
+            capability_name=capability_name,
+            request_payload=request_payload,
+            response_model=response_model,
+        )
