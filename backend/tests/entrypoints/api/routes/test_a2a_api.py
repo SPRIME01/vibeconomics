@@ -91,13 +91,14 @@ def test_execute_summarize_text_capability(
     assert isinstance(call_args[1]['data'], SummarizeTextA2ARequest)
     assert call_args[1]['data'].text_to_summarize == "This is a test."
 
-    # The actual router's handle_a2a_request call does not pass 'capability_metadata'.
-    # It passes 'capability_name' and 'data'.
-    # So, this assertion needs to be removed or changed if we adapt the mock call.
-    # For now, let's assume the mock_a2a_handler_service.handle_a2a_request was called with:
-    # (capability_name="SummarizeText", data=SummarizeTextA2ARequest(text_to_summarize="This is a test."))
-    # The capability_metadata is not passed to handler_service.handle_a2a_request in the actual router.
-    # assert call_args[1]['capability_metadata'].name == "SummarizeText" # This will fail.
+# The actual router's handle_a2a_request call does not pass 'capability_metadata'.
+# It passes 'capability_name' and 'data'.
+# So, this assertion needs to be removed or changed if we adapt the mock call.
+# For now, let's assume the mock_a2a_handler_service.handle_a2a_request was called with:
+# (capability_name="SummarizeText", data=SummarizeTextA2ARequest(text_to_summarize="This is a test."))
+# The capability_metadata is not passed to handler_service.handle_a2a_request in the actual router.
+# assert call_args[1]['capability_metadata'].name == "SummarizeText" # This will fail.
+
 
 
 def test_execute_capability_not_found(client: TestClient, mock_a2a_capability_service: AsyncMock):
