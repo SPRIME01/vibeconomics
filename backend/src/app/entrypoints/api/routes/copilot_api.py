@@ -46,11 +46,15 @@ async def execute_copilot_action(
     ai_service: AIPatternExecutionService = Depends(get_ai_pattern_execution_service)
 ):
     """
-    Receives a request from a CopilotKit frontend, processes it
-    using the AIPatternExecutionService, and returns the AI's response.
-
-    The `conversationId` can be used to maintain context across multiple turns
-    if the `AIPatternExecutionService` is configured to use it (e.g., via session_id).
+    Processes a CopilotKit frontend request by executing an AI pattern and returning the AI-generated reply.
+    
+    Attempts to use the provided `conversationId` as a session identifier for context continuity if it is a valid UUID. Handles AI service results of various types and returns a string reply. Raises an HTTP 500 error if prompt generation fails or for unexpected exceptions.
+    
+    Args:
+        request_data: The request payload containing the user message and optional conversation ID.
+    
+    Returns:
+        CopilotExecuteResponse containing the AI-generated reply.
     """
     try:
         # Attempt to convert conversationId to UUID if it's provided
@@ -101,14 +105,15 @@ async def execute_copilot_action(
 @router.post("/mock", response_model=CopilotMockResponse)
 async def mock_copilot_endpoint(request_data: CopilotMockRequest = Body(...)):
     """
-    Mock endpoint for Storybook development and frontend testing.
-    Returns predictable responses based on the 'scenario' parameter.
-    This helps simulate various backend states without actual AI processing.
-
-    Allowed scenarios:
-    - **"success"**: Simulates a successful AI response.
-    - **"error"**: Simulates a server-side error.
-    - **"streaming"**: Simulates the beginning of a streaming response (actual streaming not implemented here).
+    Simulates backend responses for frontend development and testing.
+    
+    Returns a mock response based on the provided scenario, allowing the frontend to test handling of successful, error, and streaming-like backend states without invoking real AI processing. Raises a 400 error for invalid scenarios.
+    
+    Args:
+        request_data: Contains the scenario string to determine the mock response.
+    
+    Returns:
+        A CopilotMockResponse with mock data and message corresponding to the scenario.
     """
     scenario = request_data.scenario
     await asyncio.sleep(1) # Simulate network and processing delay
