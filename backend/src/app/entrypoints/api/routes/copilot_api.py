@@ -99,11 +99,6 @@ async def execute_copilot_action(
 
 
 @router.post("/mock", response_model=CopilotMockResponse)
-async def mock_copilot_endpoint(request_data: CopilotMockRequest):
-    """
-    Mock endpoint for Storybook development and testing.
-    Returns predictable responses based on the 'scenario' parameter.
-    """
 async def mock_copilot_endpoint(request_data: CopilotMockRequest = Body(...)):
     """
     Mock endpoint for Storybook development and frontend testing.
