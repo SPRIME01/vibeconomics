@@ -13,6 +13,12 @@ from app.service_layer.template_service import TemplateService
 from app.service_layer.unit_of_work import AbstractUnitOfWork
 from app.adapters.a2a_client_adapter import A2AClientAdapter # Import A2AClientAdapter
 
+# Imports for execute_dspy_module
+import dspy
+import inspect
+from typing import Type # For type hinting module_class
+from app.service_layer.fabric_patterns import CollaborativeRAGModule # Example module
+
 
 class EmptyRenderedPromptError(ValueError):
     pass
@@ -43,6 +49,86 @@ class AIPatternExecutionService:
         self.uow = uow
         self.memory_service = memory_service
         self.a2a_client_adapter = a2a_client_adapter # Store a2a_client_adapter
+
+    async def execute_dspy_module(
+        self,
+        module_class: Type[dspy.Module],
+        module_input: Any,
+        **kwargs: Any, # These kwargs are intended for the module's constructor
+    ) -> Any:
+        """
+        Instantiates and executes a DSPy module.
+
+        Args:
+            module_class: The class of the DSPy module to instantiate (e.g., CollaborativeRAGModule).
+            module_input: The primary input for the module's `forward` method.
+                          If the forward method expects a single positional argument, this is it.
+                          If it expects keyword arguments, module_input should be a dictionary
+                          that will be unpacked (e.g. `**module_input`).
+                          For CollaborativeRAGModule, this is `input_question`.
+            **kwargs: Additional keyword arguments for instantiating the module.
+
+        Returns:
+            The result from the module's `forward` method.
+        
+        Raises:
+            AttributeError: If a2a_adapter is required by module but not available in service.
+            NotImplementedError: If module_input is a dictionary for kwarg passing to forward,
+                                 as this needs more robust signature inspection of forward.
+        """
+        constructor_args = kwargs.copy()
+        module_signature_params = inspect.signature(module_class.__init__).parameters
+
+        if "a2a_adapter" in module_signature_params:
+            if self.a2a_client_adapter:
+                constructor_args["a2a_adapter"] = self.a2a_client_adapter
+            else:
+                # Module requires a2a_adapter, but service doesn't have one.
+                # This could be an error or handled based on module's specific needs
+                # if a2a_adapter is optional in the module's __init__.
+                # For now, let's assume if it's in __init__, it's needed.
+                raise AttributeError(
+                    f"{module_class.__name__} requires an 'a2a_adapter', but it's not available in AIPatternExecutionService."
+                )
+        
+        # Note on LLM Configuration for DSPy:
+        # DSPy modules require an LLM to be configured via dspy.settings.configure(lm=your_lm).
+        # This service assumes that the LM is configured elsewhere globally (e.g., application startup, or test setup).
+        # A check could be added here: if not dspy.settings.lm: logging.warning("DSPy LM not configured globally.")
+        
+        module_instance = module_class(**constructor_args)
+
+        # Executing the forward method.
+        # The current CollaborativeRAGModule.forward takes `input_question: str`.
+        # If module_input is a dict and forward expects kwargs, use **module_input.
+        # For now, we assume module_input directly maps to the first arg of forward or is handled by the module.
+        # A more robust solution would inspect `module_instance.forward` signature.
+        if isinstance(module_input, dict) and not (len(inspect.signature(module_instance.forward).parameters) == 1 and next(iter(inspect.signature(module_instance.forward).parameters)) == 'self'):
+             # Check if forward takes kwargs by inspecting its signature
+            forward_params = inspect.signature(module_instance.forward).parameters
+            if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in forward_params.values()): # **kwargs present
+                result = await module_instance.forward(**module_input)
+            elif all(k in forward_params for k in module_input.keys()): # all keys in module_input are named params
+                 result = await module_instance.forward(**module_input)
+            else:
+                # This case is ambiguous: module_input is a dict, but forward doesn't clearly take **kwargs
+                # or all keys as named parameters. We'll pass it as a single dict argument.
+                # This might be an error for modules not expecting a dict as their first arg.
+                # Example: CollaborativeRAGModule expects input_question (str), not a dict.
+                # The user of execute_dspy_module must ensure module_input matches the forward method's expectation.
+                # For CollaborativeRAGModule, module_input should be the string for input_question.
+                # If module_input *is* the dict of kwargs for forward, then the signature above should be different.
+                # The subtask mentioned "module_instance.forward(module_input)", implying direct pass.
+                # Let's stick to direct pass for a single argument.
+                # If module_input is a dict and intended for multiple args in forward, the caller needs to be specific.
+                # For now, this path will assume module_input is the single expected argument.
+                # This means if module_input is a dict, it's passed as that dict object.
+                 result = await module_instance.forward(module_input)
+
+        else: # module_input is not a dict, or forward is simple (e.g. only self)
+            result = await module_instance.forward(module_input)
+            
+        return result
 
     async def execute_pattern(
         self,
