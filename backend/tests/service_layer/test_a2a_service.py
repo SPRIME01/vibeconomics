@@ -63,6 +63,9 @@ def test_get_nonexistent_capability(a2a_capability_service: A2ACapabilityService
 
 
 def test_list_capabilities(a2a_capability_service: A2ACapabilityService):
+    """
+    Tests that multiple capabilities can be registered and that list_capabilities returns all registered capabilities with correct names.
+    """
     capability1_metadata = CapabilityMetadata(
         name="SummarizeText",
         description="Summarizes a given text.",

@@ -30,6 +30,13 @@ class AIPatternExecutionService:
         memory_service: AbstractMemoryService | None = None,
         a2a_client_adapter: A2AClientAdapter | None = None, # Add a2a_client_adapter
     ):
+        """
+        Initializes the AI pattern execution service with required domain and provider services.
+        
+        Args:
+            memory_service: Optional memory service for conversation context persistence.
+            a2a_client_adapter: Optional adapter for A2A client integration.
+        """
         self.pattern_service = pattern_service
         self.template_service = template_service
         self.strategy_service = strategy_service
@@ -49,6 +56,27 @@ class AIPatternExecutionService:
         model_name: str | None = None,
         output_model: type[BaseModel] | None = None,
     ) -> Any:
+        """
+        Executes an AI interaction pattern asynchronously, constructing prompts from conversation history, strategy, context, and pattern content, then returning the AI's response.
+        
+        If a session ID is provided, conversation history is included in the prompt and updated with the new exchange. Strategy and context content are optionally appended. The prompt is rendered with template variables and context data, including memory service and A2A client adapter if available. The AI provider generates a completion, which is saved to the conversation. If an output Pydantic model is specified, the AI response is parsed and validated against it; otherwise, the raw response is returned.
+        
+        Args:
+            pattern_name: The name of the AI pattern to execute.
+            input_variables: Variables to render into the prompt template.
+            session_id: Optional conversation session identifier for maintaining history.
+            strategy_name: Optional strategy to influence prompt construction.
+            context_name: Optional context to include in the prompt.
+            model_name: Optional AI model name for completion.
+            output_model: Optional Pydantic model for structured response parsing.
+        
+        Returns:
+            The AI response as a parsed model instance if output_model is provided, otherwise as a string.
+        
+        Raises:
+            EmptyRenderedPromptError: If the rendered prompt is empty or contains only whitespace.
+            ValidationError: If output_model is provided and the AI response cannot be parsed into it.
+        """
         conversation: Conversation | None = None
         prompt_parts: list[str] = []
 

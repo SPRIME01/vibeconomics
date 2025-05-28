@@ -229,28 +229,51 @@ class TemplateExtensionRegistry:
     """Registry for template extensions that can be called from templates."""
 
     def __init__(self) -> None:
+        """
+        Initializes the TemplateExtensionRegistry with an empty extension registry.
+        """
         self._extensions: dict[str, Callable[..., Any]] = {} # Allow async callables returning Any (e.g. dict or str)
 
     def register(self, name: str, func: Callable[..., Any]) -> None:
-        """Register a template extension function (can be async)."""
+        """
+        Registers a template extension function under the specified name.
+        
+        The function can be synchronous or asynchronous and will be available for invocation
+        when processing template extensions.
+        """
         self._extensions[name] = func
 
     def get(self, name: str) -> Callable[..., Any] | None:
-        """Get a registered extension function."""
+        """
+        Retrieves a registered extension function by name.
+        
+        Args:
+            name: The name of the extension function to retrieve.
+        
+        Returns:
+            The registered extension function if found, otherwise None.
+        """
         return self._extensions.get(name)
 
     def list_extensions(self) -> dict[str, Callable[..., Any]]:
-        """List all registered extensions."""
+        """
+        Returns a copy of all registered template extension functions.
+        
+        Returns:
+            A dictionary mapping extension names to their corresponding callable functions.
+        """
         return self._extensions.copy() # Corrected from self.list_extensions()
 
     def _find_extension_boundaries(
         self, template: str
     ) -> list[tuple[int, int, str, str, str]]:
         """
-        Find all extension boundaries in the template.
-
+        Parses the template string to locate all extension calls and their boundaries.
+        
+        Scans the template for extension patterns of the form `{{namespace:operation:args}}`, correctly handling nested braces and quoted strings within the arguments. Returns a list of tuples containing the start and end positions of each extension, along with the extracted namespace, operation, and argument string.
+        
         Returns:
-            List of tuples: (start_pos, end_pos, namespace, operation, args)
+            A list of tuples, each containing (start_pos, end_pos, namespace, operation, args).
         """
         extensions = []
         i = 0
@@ -348,7 +371,18 @@ class TemplateExtensionRegistry:
     async def process_template_extensions(
         self, template: str, variables: dict[str, Any]
     ) -> str:
-        """Process template extensions in the format {{namespace:operation:args}}."""
+        """
+        Processes all template extensions in the given template string and replaces them with the results of their corresponding extension functions.
+        
+        Scans the template for extension calls in the format `{{namespace:operation:args}}`, parses their arguments according to extension type, invokes the registered extension function (awaiting if asynchronous), and replaces each extension call with the function's output. Non-string results are serialized to JSON. On error, inserts an error message in place of the extension call.
+        
+        Args:
+            template: The template string containing extension calls.
+            variables: A dictionary of variables available for extension processing.
+        
+        Returns:
+            The template string with all extension calls replaced by their computed results.
+        """
         processed_template = template
 
         # Process extensions from right to left to maintain positions
@@ -455,13 +489,10 @@ def create_memory_extensions(
     memory_service: AbstractMemoryService,
 ) -> dict[str, Callable[..., str]]:
     """
-    Create memory-related template extensions bound to a memory service.
-
-    Args:
-        memory_service: The memory service instance to use
-
+    Creates memory-related template extension functions bound to a specific memory service.
+    
     Returns:
-        Dictionary of extension functions
+        A dictionary containing extension functions for searching and adding memories, each bound to the provided memory service instance.
     """
 
     def bound_memory_search(user_id: str, query: str, limit: int = 5) -> str:
@@ -497,13 +528,26 @@ class GenericRequestData(BaseModel):
 
 def create_a2a_extensions(adapter: A2AClientAdapter) -> dict[str, Callable[..., Any]]:
     """
-    Create A2A-related template extensions bound to an A2AClientAdapter.
+    Creates template extension functions for invoking remote capabilities via an A2AClientAdapter.
+    
+    Returns:
+        A dictionary containing the asynchronous 'a2a_invoke' extension function, which parses colon-separated key-value arguments to call a remote agent's capability with an optional JSON payload. The function returns the response as a dictionary or raises ExtensionArgumentError on invalid input.
     """
     async def _a2a_invoke_extension_async(gpt_args_str: str) -> dict:
         """
-        Template extension for A2A calls.
-        Format: {{a2a:invoke:agent_url=<URL>:capability=<NAME>:payload=<JSON_STRING_OR_VAR>}}
-        Payload should be a JSON string.
+        Invokes a remote capability on an agent via the A2AClientAdapter.
+        
+        Parses a colon-separated argument string to extract the agent URL, capability name, and an optional JSON payload. Validates required arguments and parses the payload as JSON. Calls the adapter's `execute_remote_capability` method asynchronously and returns the response as a dictionary.
+        
+        Args:
+            gpt_args_str: Argument string in the format "agent_url=<URL>:capability=<NAME>:payload=<JSON_STRING>".
+        
+        Returns:
+            The response from the remote capability as a dictionary.
+        
+        Raises:
+            ExtensionArgumentError: If required arguments are missing or the payload is not valid JSON.
+            RuntimeError: If the A2AClientAdapter is not available.
         """
         agent_url = ""
         capability_name = ""
@@ -559,13 +603,10 @@ def create_activepieces_extensions(
     activepieces_adapter: AbstractActivePiecesAdapter,
 ) -> dict[str, Callable[..., str]]:
     """
-    Create ActivePieces-related template extensions bound to an ActivePieces adapter.
-
-    Args:
-        activepieces_adapter: The ActivePieces adapter instance to use.
-
+    Creates template extension functions for running ActivePieces workflows.
+    
     Returns:
-        Dictionary of extension functions.
+        A dictionary with the 'activepieces_run_workflow' extension function, which executes a workflow using the provided ActivePieces adapter and returns the result as a JSON string.
     """
 
     def bound_activepieces_run_workflow(workflow_id: str, input_data_str: str) -> str:
@@ -598,13 +639,18 @@ def create_activepieces_extensions(
 
 def parse_extension_call(extension_text: str) -> tuple[str, dict[str, Any]]:
     """
-    Parse extension call syntax like 'memory:search:user123:my query'.
-
+    Parses an extension call string into its name and argument dictionary.
+    
+    Supports specific parsing for 'memory:search' (user_id and query) and 'activepieces:run_workflow' (workflow_id and optional input data). For other extensions, returns the argument string under the key 'gpt_args_str'.
+    
     Args:
-        extension_text: The extension call text
-
+        extension_text: The extension call string, e.g., 'memory:search:user123:my query'.
+    
     Returns:
-        Tuple of (extension_name, kwargs)
+        A tuple containing the extension name (e.g., 'memory:search') and a dictionary of parsed arguments.
+    
+    Raises:
+        ValueError: If the extension syntax is invalid or required arguments are missing.
     """
     # Only split on the first two colons; everything after is a single argument
     parts = extension_text.split(":", 2)
