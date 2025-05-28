@@ -36,8 +36,8 @@ class CollaborativeRAGModule(dspy.Module):
         # that matches the RemoteTaskResponse model.
         # The response_model parameter ensures the response is parsed into this Pydantic model.
         response = await self.a2a_adapter.execute_remote_capability(
-            agent_url="http://mocked-agent-url",  # This will be mocked in tests
-            capability_name="remote_rag_task",
+            agent_url=self.remote_agent_url,  # Use configured agent URL
+            capability_name=self.remote_capability_name, # Use configured capability name
             request_payload=request_payload,
             response_model=RemoteTaskResponse  # Pass the class itself
         )
