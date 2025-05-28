@@ -47,11 +47,15 @@ async def execute_copilot_action(
     ai_service: AIPatternExecutionService = Depends(get_ai_pattern_execution_service)
 ):
     """
-    Receives a request from a CopilotKit frontend, processes it
-    using the AIPatternExecutionService, and returns the AI's response.
-
-    The `conversationId` can be used to maintain context across multiple turns
-    if the `AIPatternExecutionService` is configured to use it (e.g., via session_id).
+    Processes a CopilotKit frontend request by executing a predefined AI pattern and returning the AI-generated reply.
+    
+    Attempts to use the provided `conversationId` as a session identifier for maintaining conversational context if it is a valid UUID. Handles errors related to prompt generation and unexpected failures by returning appropriate HTTP 500 responses.
+    
+    Args:
+        request_data: Contains the user's message and an optional conversation ID.
+    
+    Returns:
+        A response containing the AI-generated reply as a string.
     """
     try:
         # Attempt to convert conversationId to UUID if it's provided
@@ -102,19 +106,21 @@ async def execute_copilot_action(
 @router.post("/mock", response_model=CopilotMockResponse)
 async def mock_copilot_endpoint(request_data: CopilotMockRequest):
     """
-    Mock endpoint for Storybook development and testing.
-    Returns predictable responses based on the 'scenario' parameter.
+    Simulates copilot API responses for frontend development and testing.
+    
+    Returns a mock response based on the provided scenario, supporting "success", "error", and "streaming" cases. Raises an HTTP 400 error for unsupported scenarios.
     """
 async def mock_copilot_endpoint(request_data: CopilotMockRequest = Body(...)):
     """
-    Mock endpoint for Storybook development and frontend testing.
-    Returns predictable responses based on the 'scenario' parameter.
-    This helps simulate various backend states without actual AI processing.
-
-    Allowed scenarios:
-    - **"success"**: Simulates a successful AI response.
-    - **"error"**: Simulates a server-side error.
-    - **"streaming"**: Simulates the beginning of a streaming response (actual streaming not implemented here).
+    Provides mock responses for frontend development based on the specified scenario.
+    
+    Simulates different backend states—success, error, or streaming—by returning predictable responses for frontend testing. Introduces a 1-second artificial delay to mimic processing time. Raises an HTTP 400 error for invalid scenarios.
+    
+    Args:
+        request_data: Contains the scenario string to determine the mock response.
+    
+    Returns:
+        A CopilotMockResponse with data and message fields reflecting the chosen scenario.
     """
     scenario = request_data.scenario
     await asyncio.sleep(1) # Simulate network and processing delay
