@@ -391,13 +391,14 @@ class TemplateExtensionRegistry:
         for start_pos, end_pos, namespace, operation, args_str in reversed(extensions):
             extension_name = f"{namespace}_{operation}"
             full_match_str = template[start_pos:end_pos]
-            replacement_text = full_match_str
+            replacement_text = full_match_str # Default to original tag if not found or error occurs (error part removed)
 
             if extension_name in self._extensions:
-                try:
-                    extension_function = self._extensions[extension_name]
+                # Removed the try...except Exception as e block here
+                # Exceptions from extension_function will now propagate
+                extension_function = self._extensions[extension_name]
 
-                    # Parse arguments based on extension type
+                # Parse arguments based on extension type
                     # Argument parsing logic needs to be robust and specific to each extension's needs.
                     # For a2a:invoke, the args_str itself is complex.
                     # For other extensions, it might be simpler.
@@ -426,20 +427,26 @@ class TemplateExtensionRegistry:
                     
                     import inspect # To check if function is async
                     if inspect.iscoroutinefunction(extension_function):
-                        replacement_value = await extension_function(*args)
+                        returned_value = await extension_function(*args)
                     else:
-                        replacement_value = extension_function(*args)
+                        returned_value = extension_function(*args)
                     
-                    # Ensure replacement_text is a string
-                    if isinstance(replacement_value, dict) or isinstance(replacement_value, list):
-                        replacement_text = json.dumps(replacement_value)
-                    else:
-                        replacement_text = str(replacement_value)
-
-                except Exception as e:
-                    replacement_text = (
-                        f"[ERROR IN EXTENSION: {extension_name} - {str(e)}]"
-                    )
+                    # Check for the new tuple format (actual_result, output_var_name)
+                    if isinstance(returned_value, tuple) and len(returned_value) == 2:
+                        actual_result, output_var_name = returned_value
+                        if output_var_name and isinstance(output_var_name, str):
+                            variables[output_var_name] = actual_result # Store result in variables
+                            replacement_text = "" # Replace with empty string in template
+                        else: # output_var_name is None or invalid, treat actual_result as the direct replacement
+                            if isinstance(actual_result, dict) or isinstance(actual_result, list):
+                                replacement_text = json.dumps(actual_result)
+                            else:
+                                replacement_text = str(actual_result)
+                    else: # Standard return type (not a special tuple)
+                        if isinstance(returned_value, dict) or isinstance(returned_value, list):
+                            replacement_text = json.dumps(returned_value)
+                        else:
+                            replacement_text = str(returned_value)
 
             # Replace this specific occurrence
             processed_template = (
@@ -531,41 +538,89 @@ def create_a2a_extensions(adapter: A2AClientAdapter) -> dict[str, Callable[..., 
     Creates A2A template extensions bound to the provided A2AClientAdapter.
     
     Returns:
-        A dictionary containing the asynchronous 'a2a_invoke' extension function, which performs an A2A remote capability call using colon-separated key-value arguments for agent URL, capability name, and a JSON payload. The extension returns the response as a dictionary or raises ExtensionArgumentError on invalid input.
+        A dictionary containing the asynchronous 'a2a_invoke' extension function.
+        The function performs an A2A remote capability call.
+        It returns a tuple (dict_result, output_var_name | None).
     """
-    async def _a2a_invoke_extension_async(gpt_args_str: str) -> dict:
+    async def _a2a_invoke_extension_async(gpt_args_str: str) -> tuple[dict, str | None]:
         """
         Invokes a remote capability on an A2A agent using provided arguments.
         
-        Parses a colon-separated argument string to extract the agent URL, capability name, and a JSON payload, then calls the adapter's `execute_remote_capability` asynchronously. Raises `ExtensionArgumentError` if required arguments are missing or the payload is not valid JSON.
+        Parses a colon-separated argument string to extract 'agent_url', 'capability', 
+        'payload' (JSON string), and an optional 'output_variable'.
+        Calls the adapter's `execute_remote_capability` asynchronously.
         
         Args:
-            gpt_args_str: Colon-separated key=value pairs specifying 'agent_url', 'capability', and 'payload' (as a JSON string).
+            gpt_args_str: Colon-separated key=value pairs. Required keys: 'agent_url', 'capability'.
+                          Optional: 'payload' (JSON string, defaults to "{}"), 
+                                    'output_variable' (string name).
         
         Returns:
-            The response from the remote capability as a dictionary.
+            A tuple: (response_data_dict, output_variable_name_or_none).
+            'response_data_dict' is the dictionary result from the A2A call.
+            'output_variable_name_or_none' is the string name if 'output_variable' was specified, else None.
         
         Raises:
             ExtensionArgumentError: If required arguments are missing or the payload is invalid JSON.
             RuntimeError: If the adapter is not available.
         """
-        agent_url = ""
-        capability_name = ""
-        payload_str = "{}" # Default to empty JSON
-
-        # Basic parsing for key=value pairs separated by ':'
-        # This parsing is simplistic and assumes clean input.
-        # A more robust parser might be needed for complex cases or error handling.
-        parts = gpt_args_str.split(':')
         parsed_args = {}
-        for part in parts:
-            if '=' in part:
-                key, value = part.split('=', 1)
-                parsed_args[key.strip()] = value.strip()
+        # More robust parsing for key=value pairs separated by ':'
+        # Handles cases where values might contain colons (e.g., in JSON payload)
+        # by splitting only at colons that are part of the key=value structure, not within JSON values.
+        # A simple split(':') is not robust enough if payload contains colons.
+        # This regex-based approach is more robust for "key=value" pairs separated by colons.
+        import re
+        # Regex to find key=value pairs, allowing for colons within the value part if it's quoted or part of JSON
+        # This is still a simplification. A truly robust parser for this syntax would be more complex.
+        # For now, we assume keys do not contain '=' and values are what's after the first '='.
+        # The main split is by ':', but we must be careful not to split inside a JSON payload.
+        # Let's parse output_variable first, then the rest.
         
+        temp_args_str = gpt_args_str
+        output_var_name: str | None = None
+
+        # Look for output_variable explicitly
+        output_var_marker = "output_variable="
+        if output_var_marker in temp_args_str:
+            # Split by output_variable to isolate it
+            parts_around_output_var = temp_args_str.split(output_var_marker, 1)
+            if len(parts_around_output_var) > 1:
+                # Potential output_var_name and the rest of its value string
+                potential_output_var_value_part = parts_around_output_var[1]
+                # The output_var_name is until the next colon (if any) that separates it from other args
+                next_colon_idx = potential_output_var_value_part.find(':')
+                if next_colon_idx != -1:
+                    output_var_name = potential_output_var_value_part[:next_colon_idx].strip()
+                    # Reconstruct temp_args_str without the output_variable part for further parsing
+                    remaining_after_output_var = potential_output_var_value_part[next_colon_idx:]
+                    temp_args_str = (parts_around_output_var[0].strip(':') + remaining_after_output_var).strip(':')
+                else: # output_variable is the last argument
+                    output_var_name = potential_output_var_value_part.strip()
+                    temp_args_str = parts_around_output_var[0].strip(':')
+        
+        # Parse the remaining arguments (agent_url, capability, payload)
+        arg_components = temp_args_str.split(':')
+        current_key = None
+        current_value_parts: list[str] = []
+
+        for component in arg_components:
+            if '=' in component: # New key=value pair
+                if current_key is not None and current_value_parts: # Save previous accumulated value
+                    parsed_args[current_key] = ':'.join(current_value_parts).strip()
+                
+                key, value_part = component.split('=', 1)
+                current_key = key.strip()
+                current_value_parts = [value_part]
+            elif current_key is not None: # Continuation of the previous value (e.g. colon in JSON)
+                current_value_parts.append(component)
+        
+        if current_key is not None and current_value_parts: # Save the last argument
+             parsed_args[current_key] = ':'.join(current_value_parts).strip()
+
         agent_url = parsed_args.get("agent_url")
         capability_name = parsed_args.get("capability")
-        payload_str = parsed_args.get("payload", "{}")
+        payload_str = parsed_args.get("payload", "{}") # Default to empty JSON string
 
         if not agent_url:
             raise ExtensionArgumentError("Missing 'agent_url' in a2a:invoke arguments.")
@@ -575,15 +630,11 @@ def create_a2a_extensions(adapter: A2AClientAdapter) -> dict[str, Callable[..., 
         try:
             payload_dict = json.loads(payload_str)
         except json.JSONDecodeError as e:
-            raise ExtensionArgumentError(f"Invalid JSON payload in a2a:invoke: {e}")
+            raise ExtensionArgumentError(f"Invalid JSON payload in a2a:invoke for key 'payload': {e}. Payload string was: {payload_str}")
 
-        # Wrap the payload_dict in a generic Pydantic model if needed by the adapter,
-        # or pass dict directly if adapter supports it.
-        # Current A2AClientAdapter expects a BaseModel for request_payload.
-        # We use a generic model that allows any extra fields.
         request_payload_model = GenericRequestData(**payload_dict)
 
-        if not adapter: # Should be provided via create_a2a_extensions closure
+        if not adapter:
             raise RuntimeError("A2AClientAdapter not available for a2a:invoke extension.")
 
         response_data = await adapter.execute_remote_capability(
@@ -592,10 +643,10 @@ def create_a2a_extensions(adapter: A2AClientAdapter) -> dict[str, Callable[..., 
             request_payload=request_payload_model,
             response_model=None  # We want a dict back
         )
-        return response_data # This will be a dict
+        return response_data, output_var_name
 
     return {
-        "a2a_invoke": _a2a_invoke_extension_async,
+        "a2a_invoke": _a2a_invoke_extension_async, # type: ignore[dict-item]
     }
 
 

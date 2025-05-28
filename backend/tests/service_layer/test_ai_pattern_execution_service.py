@@ -57,12 +57,6 @@ def mock_a2a_client_adapter() -> mock.Mock:
 
 @pytest.fixture
 def mock_uow() -> mock.Mock:
-    """
-    Creates a mock instance of AbstractUnitOfWork with async context manager and conversation repository methods.
-    
-    Returns:
-        A mock object simulating an AbstractUnitOfWork, including async methods for context management, conversation operations, and commit.
-    """
     uow_mock = mock.Mock(spec=AbstractUnitOfWork)
     uow_mock.__aenter__ = mock.AsyncMock(return_value=uow_mock)
     uow_mock.__aexit__ = mock.AsyncMock(return_value=None)
@@ -789,9 +783,6 @@ async def test_execute_pattern_with_a2a_client_adapter_available(
     mock_a2a_client_adapter: mock.Mock,
 ) -> None:
     # Arrange
-    """
-    Tests that the AIPatternExecutionService passes the A2A client adapter to the template rendering context and returns the expected AI response when available.
-    """
     mock_pattern_service.get_pattern_content = mock.AsyncMock(
         return_value="Pattern with A2A integration"
     )
@@ -835,15 +826,10 @@ async def test_execute_dspy_module_with_a2a_adapter(
     mock_context_service: MagicMock,
     mock_ai_provider_service: MagicMock,
     mock_uow: MagicMock,
-    mock_memory_service: MagicMock,  # Added mock_memory_service
-    # Use existing fixture and configure its async methods
-    mock_a2a_client_adapter: AsyncMock,
+    mock_memory_service: MagicMock, # Added mock_memory_service
+    # Use AsyncMock for a2a_client_adapter as its methods are async
+    mock_a2a_client_adapter_instance: AsyncMock, 
 ) -> None:
-    """
-    Tests that `execute_dspy_module` correctly instantiates a DSPy module requiring an `a2a_adapter`, calls its async `forward` method with the provided input, and returns the expected output.
-    
-    Mocks the DSPy module class and its `forward` method, patches the DSPy language model, and verifies that the adapter is passed to the module constructor, the input is forwarded, and the result matches the mocked output.
-    """
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
         template_service=mock_template_service,
@@ -852,14 +838,8 @@ async def test_execute_dspy_module_with_a2a_adapter(
         ai_provider_service=mock_ai_provider_service,
         uow=mock_uow,
         memory_service=mock_memory_service,
-        a2a_client_adapter=mock_a2a_client_adapter,
+        a2a_client_adapter=mock_a2a_client_adapter_instance,
     )
-
-    # ensure the adapter’s async calls can be awaited
-    mock_a2a_client_adapter.execute_remote_capability = AsyncMock()
-
-    # …later in your assertions…
-    MockDSPyModuleClass.assert_called_once_with(a2a_adapter=mock_a2a_client_adapter)
 
     # Mock the DSPy module class (CollaborativeRAGModule in this case)
     MockDSPyModuleClass = MagicMock(spec=CollaborativeRAGModule)
@@ -914,12 +894,6 @@ async def test_execute_dspy_module_with_a2a_adapter(
 # Define a simple DSPy module for the next test
 class SimpleDSPyModule(dspy.Module):
     def __init__(self, an_arg: str = "default"): # Does not take a2a_adapter
-        """
-        Initializes the SimpleDSPyModule with an optional argument and a mocked predictor.
-        
-        Args:
-            an_arg: Optional argument for the module, defaults to "default".
-        """
         super().__init__()
         self.an_arg = an_arg
         # Mock the predictor part if it involves an LM call for this simple module
@@ -935,15 +909,6 @@ class SimpleDSPyModule(dspy.Module):
         # prediction = self.predictor(text_input=text_input)
         # return prediction.result
         # For the test, we can make it simpler if self.predictor is pre-configured:
-        """
-        Processes the input text using the module's predictor and returns the prediction result.
-        
-        Args:
-            text_input: The input string to be processed by the predictor.
-        
-        Returns:
-            The result produced by the predictor for the given input.
-        """
         return self.predictor(text_input=text_input).result
 
 
@@ -958,15 +923,6 @@ async def test_execute_dspy_module_without_a2a_adapter_if_not_needed(
     mock_memory_service: MagicMock,
     mock_a2a_client_adapter_instance: AsyncMock, # Service can have it
 ) -> None:
-    """
-    Tests that `execute_dspy_module` correctly instantiates and executes a DSPy module
-    that does not require an `a2a_adapter`, ensuring only relevant constructor arguments
-    are passed and the module's `forward` method is called with the input.
-    
-    Asserts that the module is instantiated without the `a2a_adapter` argument, the
-    `forward` method is invoked with the provided input, and the returned result matches
-    the mocked output.
-    """
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
         template_service=mock_template_service,
@@ -1043,12 +999,6 @@ async def test_execute_dspy_module_raises_if_adapter_needed_but_missing(
     mock_memory_service: MagicMock,
 ) -> None:
     # Instantiate service WITHOUT a2a_client_adapter
-    """
-    Tests that executing a DSPy module requiring an a2a_adapter raises an AttributeError
-    when the adapter is not provided to the service.
-    
-    Asserts that the error message indicates the missing adapter requirement.
-    """
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
         template_service=mock_template_service,
@@ -1095,3 +1045,88 @@ async def test_execute_dspy_module_raises_if_adapter_needed_but_missing(
 # inside the module's test, not here. Here, we just pass the adapter.
 # The `CollaborativeRAGModule` is mocked at class level, so its interaction with the adapter
 # is not directly tested here, only that the adapter is passed to its constructor.
+
+import httpx # For the new test
+
+@pytest.mark.asyncio
+async def test_execute_pattern_propagates_a2a_extension_error(
+    mock_pattern_service: MagicMock,
+    # mock_template_service is not used here, a real one is created
+    mock_strategy_service: MagicMock,
+    mock_context_service: MagicMock,
+    mock_ai_provider_service: MagicMock,
+    mock_uow: MagicMock,
+    mock_memory_service: MagicMock,
+    # mock_a2a_client_adapter fixture can be used to create the one that raises error
+) -> None:
+    # 1. Create a mock A2AClientAdapter that will raise an error
+    error_raising_a2a_adapter = AsyncMock(spec=A2AClientAdapter)
+    
+    # Create a MagicMock for the request object, as httpx.RequestError expects it
+    mock_request = MagicMock(spec=httpx.Request)
+    mock_request.method = "POST"
+    mock_request.url = "http://test.agent/a2a"
+
+    error_to_raise = httpx.RequestError(
+        "Simulated network error", request=mock_request
+    )
+    error_raising_a2a_adapter.execute_remote_capability.side_effect = error_to_raise
+
+    # 2. Instantiate a real TemplateService with this error-raising adapter
+    # TemplateService also takes memory_service and activepieces_adapter, pass None if not relevant
+    real_template_service = TemplateService(
+        memory_service=None, # Or mock_memory_service if pattern uses memory extensions
+        activepieces_adapter=None,
+        a2a_client_adapter=error_raising_a2a_adapter # Key part
+    )
+
+    # 3. Instantiate AIPatternExecutionService with the real TemplateService
+    # and other necessary mock services.
+    # The main a2a_client_adapter for AIPatternExecutionService (used for execute_dspy_module)
+    # can be a different mock or None if not relevant to this specific test.
+    # Here, we are testing a2a extensions via TemplateService, so the one in TemplateService matters.
+    service = AIPatternExecutionService(
+        pattern_service=mock_pattern_service,
+        template_service=real_template_service, # Pass the real one
+        strategy_service=mock_strategy_service,
+        context_service=mock_context_service,
+        ai_provider_service=mock_ai_provider_service,
+        uow=mock_uow,
+        memory_service=mock_memory_service,
+        a2a_client_adapter=None # This adapter is for DSPy modules, not relevant here
+    )
+
+    # 4. Define a pattern that uses the a2a:invoke extension
+    pattern_name_for_test = "test_a2a_fail_pattern"
+    pattern_content_with_a2a = "Calling A2A: {{a2a:invoke:agent_url=http://test.agent/a2a:capability=test_cap:payload={{\"key\":\"value\"}}}}"
+    
+    mock_pattern_service.get_pattern_content = mock.AsyncMock(return_value=pattern_content_with_a2a)
+
+    # 5. Mock other services to return benign defaults to avoid unrelated errors
+    mock_strategy_service.get_strategy = mock.AsyncMock(return_value=None) # No strategy
+    mock_context_service.get_context_content = mock.AsyncMock(return_value=None) # No context
+    # ai_provider_service.get_completion won't be called if template rendering fails
+    mock_uow.conversations.get_by_id = mock.AsyncMock(return_value=None) # No existing conversation
+
+    # 6. Execute and assert exception
+    with pytest.raises(httpx.RequestError, match="Simulated network error"):
+        await service.execute_pattern(
+            pattern_name=pattern_name_for_test,
+            input_variables={"input": "test"} # Variables for the pattern if any
+        )
+
+    # 7. Verify A2AClientAdapter.execute_remote_capability was called
+    error_raising_a2a_adapter.execute_remote_capability.assert_called_once()
+    
+    # Verify call arguments (optional, but good for sanity check)
+    # The actual call args might be complex to construct here if {{vars}} are in payload
+    # but for payload={}, it's simple.
+    # For payload={{"key":"value"}}, the GenericRequestData would wrap this.
+    # Let's check the core args.
+    args, kwargs = error_raising_a2a_adapter.execute_remote_capability.call_args
+    assert kwargs['agent_url'] == "http://test.agent/a2a"
+    assert kwargs['capability_name'] == "test_cap"
+    # The payload will be a GenericRequestData instance
+    from app.service_layer.template_extensions import GenericRequestData
+    assert isinstance(kwargs['request_payload'], GenericRequestData)
+    assert kwargs['request_payload'].model_dump() == {"key": "value"}

@@ -37,9 +37,9 @@ class AIPatternExecutionService:
         a2a_client_adapter: A2AClientAdapter | None = None, # Add a2a_client_adapter
     ):
         """
-        Initializes the AI pattern execution service with required dependencies.
+        Initializes the AI pattern execution service with required domain and provider services.
         
-        Sets up the service for AI pattern execution by injecting services for pattern management, template rendering, strategy and context retrieval, AI provider interaction, unit-of-work management, and optional memory and A2A client adapter support.
+        This constructor sets up the service with dependencies for pattern management, template rendering, strategy and context retrieval, AI provider interaction, unit-of-work management, and optional memory and A2A client adapter services.
         """
         self.pattern_service = pattern_service
         self.template_service = template_service
@@ -57,36 +57,39 @@ class AIPatternExecutionService:
         **kwargs: Any, # These kwargs are intended for the module's constructor
     ) -> Any:
         """
-        Instantiates and executes a DSPy module with the provided input.
-        
-        If the module's constructor requires an `a2a_adapter` and one is available in the service, it is injected automatically; otherwise, an `AttributeError` is raised if required. The method then creates an instance of the module and asynchronously calls its `forward` method, passing `module_input` either as a single argument or unpacked as keyword arguments, depending on the method's signature.
-        
+        Instantiates and executes a DSPy module.
+
         Args:
-            module_class: The DSPy module class to instantiate.
-            module_input: Input for the module's `forward` method; can be a single value or a dictionary for keyword arguments.
-            **kwargs: Additional keyword arguments for the module's constructor.
-        
+            module_class: The class of the DSPy module to instantiate (e.g., CollaborativeRAGModule).
+            module_input: The primary input for the module's `forward` method.
+                          If the forward method expects a single positional argument, this is it.
+                          If it expects keyword arguments, module_input should be a dictionary
+                          that will be unpacked (e.g. `**module_input`).
+                          For CollaborativeRAGModule, this is `input_question`.
+            **kwargs: Additional keyword arguments for instantiating the module.
+
         Returns:
-            The result returned by the module's `forward` method.
+            The result from the module's `forward` method.
         
         Raises:
-            AttributeError: If the module requires an `a2a_adapter` but none is available.
-            NotImplementedError: If `module_input` is a dictionary and the method cannot robustly determine how to unpack it for the `forward` method.
+            AttributeError: If a2a_adapter is required by module but not available in service.
+            NotImplementedError: If module_input is a dictionary for kwarg passing to forward,
+                                 as this needs more robust signature inspection of forward.
         """
         constructor_args = kwargs.copy()
         module_signature_params = inspect.signature(module_class.__init__).parameters
 
         if "a2a_adapter" in module_signature_params:
-            a2a_param = module_signature_params["a2a_adapter"]
-            has_default = a2a_param.default is not inspect.Parameter.empty
             if self.a2a_client_adapter:
                 constructor_args["a2a_adapter"] = self.a2a_client_adapter
-            elif not has_default:
-                # Module requires a2a_adapter (no default), but service doesn't have one.
+            else:
+                # Module requires a2a_adapter, but service doesn't have one.
+                # This could be an error or handled based on module's specific needs
+                # if a2a_adapter is optional in the module's __init__.
+                # For now, let's assume if it's in __init__, it's needed.
                 raise AttributeError(
                     f"{module_class.__name__} requires an 'a2a_adapter', but it's not available in AIPatternExecutionService."
                 )
-            # else: a2a_adapter is optional, so do nothing
         
         # Note on LLM Configuration for DSPy:
         # DSPy modules require an LLM to be configured via dspy.settings.configure(lm=your_lm).
@@ -100,25 +103,29 @@ class AIPatternExecutionService:
         # If module_input is a dict and forward expects kwargs, use **module_input.
         # For now, we assume module_input directly maps to the first arg of forward or is handled by the module.
         # A more robust solution would inspect `module_instance.forward` signature.
-        forward_sig = inspect.signature(module_instance.forward)
-        arg_names = [p.name for p in forward_sig.parameters.values() if p.name != "self"]
-
-        if isinstance(module_input, dict):
-            if set(module_input.keys()) <= set(arg_names) or any(
-                p.kind == inspect.Parameter.VAR_KEYWORD for p in forward_sig.parameters.values()
-            ):
+        if isinstance(module_input, dict) and not (len(inspect.signature(module_instance.forward).parameters) == 1 and next(iter(inspect.signature(module_instance.forward).parameters)) == 'self'):
+             # Check if forward takes kwargs by inspecting its signature
+            forward_params = inspect.signature(module_instance.forward).parameters
+            if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in forward_params.values()): # **kwargs present
                 result = await module_instance.forward(**module_input)
+            elif all(k in forward_params for k in module_input.keys()): # all keys in module_input are named params
+                 result = await module_instance.forward(**module_input)
             else:
-                raise TypeError(
-                    f"Keys {module_input.keys()} do not match parameters {arg_names} "
-                    f"of {module_class.__name__}.forward"
-                )
-        else:
-            if len(arg_names) != 1:
-                raise TypeError(
-                    f"{module_class.__name__}.forward expects {len(arg_names)} arguments, "
-                    "but a single positional value was supplied."
-                )
+                # This case is ambiguous: module_input is a dict, but forward doesn't clearly take **kwargs
+                # or all keys as named parameters. We'll pass it as a single dict argument.
+                # This might be an error for modules not expecting a dict as their first arg.
+                # Example: CollaborativeRAGModule expects input_question (str), not a dict.
+                # The user of execute_dspy_module must ensure module_input matches the forward method's expectation.
+                # For CollaborativeRAGModule, module_input should be the string for input_question.
+                # If module_input *is* the dict of kwargs for forward, then the signature above should be different.
+                # The subtask mentioned "module_instance.forward(module_input)", implying direct pass.
+                # Let's stick to direct pass for a single argument.
+                # If module_input is a dict and intended for multiple args in forward, the caller needs to be specific.
+                # For now, this path will assume module_input is the single expected argument.
+                # This means if module_input is a dict, it's passed as that dict object.
+                 result = await module_instance.forward(module_input)
+
+        else: # module_input is not a dict, or forward is simple (e.g. only self)
             result = await module_instance.forward(module_input)
             
         return result
@@ -136,12 +143,10 @@ class AIPatternExecutionService:
         """
         Executes an AI pattern by assembling prompt components, rendering the prompt, invoking AI completion, and managing conversation state.
         
-        This method constructs a prompt from conversation history, strategy, context, and pattern content, then renders it using the provided input variables. It requests a completion from the AI provider and updates or creates the conversation session accordingly. If an output model is specified, the AI response is parsed into that model; otherwise, the raw response is returned.
-        
         Args:
-            pattern_name: Name of the AI pattern to execute.
-            input_variables: Variables for prompt rendering and AI completion.
-            session_id: Optional identifier for maintaining conversation context.
+            pattern_name: The name of the AI pattern to execute.
+            input_variables: Variables to be used for prompt rendering and AI completion.
+            session_id: Optional conversation session identifier for maintaining context.
             strategy_name: Optional strategy to influence prompt construction.
             context_name: Optional context to include in the prompt.
             model_name: Optional AI model name for completion.
