@@ -66,11 +66,6 @@ export default {
   component: CopilotIntegration,
   decorators: [
     CopilotProviderDecorator, // Provides CopilotKit context
-    // Decorator to capture story context for the MSW mock handler
-    (Story, ctx) => {
-      storyBookContext = ctx; // Capture context
-      return <Story />;
-    }
   ],
   tags: ['autodocs'],
   parameters: {
