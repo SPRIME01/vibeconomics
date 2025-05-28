@@ -29,6 +29,34 @@ def test_register_and_get_capability(a2a_capability_service: A2ACapabilityServic
     assert retrieved_capability.output_schema == SummarizeTextA2AResponse
 
 
+def test_reregister_capability_overwrites(a2a_capability_service: A2ACapabilityService):
+    # Register the initial capability
+    capability_metadata_1 = CapabilityMetadata(
+        name="SummarizeText",
+        description="Summarizes a given text.",
+        input_schema=SummarizeTextA2ARequest,
+        output_schema=SummarizeTextA2AResponse,
+        handler=None
+    )
+    a2a_capability_service.register_capability(capability_metadata_1)
+    retrieved_capability_1 = a2a_capability_service.get_capability("SummarizeText")
+    assert retrieved_capability_1 is not None
+    assert retrieved_capability_1.description == "Summarizes a given text."
+
+    # Register a new capability with the same name but different description
+    capability_metadata_2 = CapabilityMetadata(
+        name="SummarizeText",
+        description="A different description.",
+        input_schema=SummarizeTextA2ARequest,
+        output_schema=SummarizeTextA2AResponse,
+        handler=None
+    )
+    a2a_capability_service.register_capability(capability_metadata_2)
+    retrieved_capability_2 = a2a_capability_service.get_capability("SummarizeText")
+    assert retrieved_capability_2 is not None
+    assert retrieved_capability_2.description == "A different description."
+    # Ensure the capability was overwritten
+    assert retrieved_capability_2 != retrieved_capability_1
 def test_get_nonexistent_capability(a2a_capability_service: A2ACapabilityService):
     retrieved_capability = a2a_capability_service.get_capability("NonExistentCapability")
     assert retrieved_capability is None
