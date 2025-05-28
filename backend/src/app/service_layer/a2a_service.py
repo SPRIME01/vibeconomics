@@ -19,8 +19,12 @@ class A2ACapabilityService:
         self.capabilities: Dict[str, CapabilityMetadata] = {}
 
     def register_capability(self, capability_metadata: CapabilityMetadata):
+        if capability_metadata.name in self.capabilities:
+            raise ValueError(
+                f"Capability '{capability_metadata.name}' already registered – "
+                "choose a unique name or call `update_capability` explicitly."
+            )
         self.capabilities[capability_metadata.name] = capability_metadata
-
     def get_capability(self, capability_name: str) -> CapabilityMetadata | None:
         return self.capabilities.get(capability_name)
 
