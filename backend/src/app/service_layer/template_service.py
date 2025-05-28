@@ -2,11 +2,13 @@ import re
 from typing import Any
 
 from app.adapters.activepieces_adapter import AbstractActivePiecesAdapter
+from app.adapters.a2a_client_adapter import A2AClientAdapter # Import A2AClientAdapter
 from app.service_layer.memory_service import AbstractMemoryService
 from app.service_layer.template_extensions import (
     TemplateExtensionRegistry,
     create_activepieces_extensions,
     create_memory_extensions,
+    create_a2a_extensions, # Import create_a2a_extensions
 )
 
 
@@ -23,16 +25,29 @@ class TemplateService:
         self,
         memory_service: AbstractMemoryService | None = None,
         activepieces_adapter: AbstractActivePiecesAdapter | None = None,
+        a2a_client_adapter: A2AClientAdapter | None = None, # Add a2a_client_adapter
     ) -> None:
+        """
+        Initializes the TemplateService with optional adapters for memory, activepieces, and A2A client services.
+        
+        Registers available template extensions based on the provided adapters.
+        """
         self.memory_service = memory_service
         self.activepieces_adapter = activepieces_adapter
+        self.a2a_client_adapter = a2a_client_adapter # Store it
         self.extension_registry = TemplateExtensionRegistry()
 
         # Register extensions
         self._register_extensions()
 
     def _register_extensions(self) -> None:
-        """Register available template extensions."""
+        """
+        Registers template extension functions from available adapters into the extension registry.
+        
+        This method adds extension functions provided by the memory service, activepieces adapter,
+        and A2A client adapter (if present) to the template extension registry, making them
+        available for use in template processing.
+        """
         if self.memory_service:
             memory_extensions = create_memory_extensions(self.memory_service)
             for name, func in memory_extensions.items():
@@ -44,33 +59,35 @@ class TemplateService:
             )
             for name, func in activepieces_extensions.items():
                 self.extension_registry.register(name, func)
+        
+        if self.a2a_client_adapter:
+            # from app.service_layer.template_extensions import create_a2a_extensions # No longer needed here due to top import
+            a2a_extensions = create_a2a_extensions(self.a2a_client_adapter)
+            for name, func in a2a_extensions.items():
+                self.extension_registry.register(name, func)
 
     async def render(
         self,
         template: str,
         variables: dict[str, Any],
-        context: dict[str, Any] | None = None,
+        context_data: dict[str, Any] | None = None, # Renamed from context to context_data for clarity
     ) -> str:
         """
-        Render a template with variables and optional context.
-
+        Renders a template string by substituting variables and processing registered extensions.
+        
         Args:
-            template: Template string with {{variable}} and {{extension:operation:args}} syntax
-            variables: Dictionary of variables to substitute
-            context: Optional context containing services like memory_service
-
+            template: The template string containing variable placeholders and extension calls.
+            variables: Dictionary of values to substitute for variable placeholders.
+            context_data: Optional dictionary with additional context; currently not used for dynamic extension registration.
+        
         Returns:
-            Rendered template string
+            The fully rendered template string with variables and extensions processed.
         """
-        # Update memory service from context if provided
-        if context and "memory_service" in context:
-            memory_service = context["memory_service"]
-            if memory_service and not self.memory_service:
-                # Dynamically register memory extensions if not already done
-                memory_extensions = create_memory_extensions(memory_service)
-                for name, func in memory_extensions.items():
-                    self.extension_registry.register(name, func)
-                self.memory_service = memory_service
+        # Note: The logic for dynamically registering extensions based on context_data
+        # for memory_service was present. If a2a_client_adapter can also be passed this way,
+        # similar dynamic registration could be added. For now, sticking to __init__ based registration.
+        # If context_data contains 'a2a_client_adapter' and self.a2a_client_adapter was None,
+        # one could initialize and register a2a_extensions here.
 
         # First, substitute simple variables
         variable_substituted_template = await self._render_variables(

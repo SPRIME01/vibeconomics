@@ -1,27 +1,27 @@
-from collections.abc import Callable  # Added Callable
+from collections.abc import Callable
 from typing import Annotated, Any
 
+import httpx
 from fastapi import Depends
 
+from app.adapters.a2a_client_adapter import A2AClientAdapter
 from app.adapters.message_bus_inmemory import InMemoryMessageBus
 from app.adapters.uow_sqlmodel import SqlModelUnitOfWork
-from app.core.base_aggregate import DomainEvent  # For MessageBusDep hint
-from app.service_layer.message_bus import (
-    AbstractMessageBus,  # Removed EventT as it's not used here generically
-)
+from app.service_layer.a2a_service import A2ACapabilityService, A2AHandlerService
+from app.service_layer.ai_pattern_execution_service import AIPatternExecutionService
+from app.service_layer.ai_provider_service import AIProviderService
+from app.service_layer.context_service import ContextService
+from app.service_layer.memory_service import AbstractMemoryService
+from app.service_layer.message_bus import AbstractMessageBus
+from app.service_layer.pattern_service import PatternService
+from app.service_layer.strategy_service import StrategyService
+from app.service_layer.template_service import TemplateService
 from app.service_layer.unit_of_work import AbstractUnitOfWork
 
 
-# Placeholder for database session factory
-def get_db_session_factory() -> Callable[
-    [], Any
-]:  # Return type is a callable that returns a session-like Any
+def get_db_session_factory() -> Callable[[], Any]:
     """
     Provides a factory for database sessions.
-
-    In a real application, this would be configured to connect to a database
-    (e.g., using SQLAlchemy sessionmaker or SQLModel Session with an engine).
-    For this DI setup, it returns a factory for a dummy session.
     """
 
     class DummySession:
@@ -55,38 +55,120 @@ def get_db_session_factory() -> Callable[
 
 
 # Global instance of message bus
-# For simplicity, instantiated directly. In a larger app, manage via app state or a DI container.
-message_bus_instance: AbstractMessageBus[DomainEvent] = InMemoryMessageBus[
-    DomainEvent
-]()
+message_bus_instance: AbstractMessageBus = InMemoryMessageBus()
 
 
 def get_uow(
     session_factory: Annotated[Callable[[], Any], Depends(get_db_session_factory)],
 ) -> AbstractUnitOfWork:
-    """
-    FastAPI dependency injector for Unit of Work.
-
-    Args:
-        session_factory: A callable that provides a database session.
-                         Injected by FastAPI via `get_db_session_factory`.
-
-    Returns:
-        An instance of SqlModelUnitOfWork.
-    """
+    """FastAPI dependency injector for Unit of Work."""
     return SqlModelUnitOfWork(session_factory=session_factory)
 
 
-def get_message_bus() -> AbstractMessageBus[DomainEvent]:  # Hinted with DomainEvent
-    """
-    FastAPI dependency injector for Message Bus.
-
-    Returns:
-        The globally available message_bus_instance.
-    """
+def get_message_bus() -> AbstractMessageBus:
+    """FastAPI dependency injector for Message Bus."""
     return message_bus_instance
+
+
+# Singleton HTTP client for A2A communications
+_http_client: httpx.AsyncClient | None = None
+
+
+async def get_http_client() -> httpx.AsyncClient:
+    """Get or create the shared HTTP client for A2A communications."""
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(timeout=30.0)
+    return _http_client
+
+
+def get_a2a_client_adapter(
+    http_client: httpx.AsyncClient = Depends(get_http_client),
+) -> A2AClientAdapter:
+    """Dependency for A2A client adapter."""
+    return A2AClientAdapter(http_client=http_client)
+
+
+def get_template_service(
+    a2a_client_adapter: A2AClientAdapter = Depends(get_a2a_client_adapter),
+) -> TemplateService:
+    """Dependency for template service with A2A client adapter."""
+    return TemplateService(a2a_client_adapter=a2a_client_adapter)
+
+
+def get_pattern_service() -> PatternService:
+    """Dependency for pattern service."""
+    return PatternService()
+
+
+def get_strategy_service() -> StrategyService:
+    """Dependency for strategy service."""
+    return StrategyService()
+
+
+def get_context_service() -> ContextService:
+    """Dependency for context service."""
+    return ContextService()
+
+
+def get_ai_provider_service() -> AIProviderService:
+    """Dependency for AI provider service."""
+    return AIProviderService()
+
+
+def get_unit_of_work() -> AbstractUnitOfWork:
+    """Dependency for unit of work."""
+    from app.adapters.fake_unit_of_work import FakeUnitOfWork
+
+    return FakeUnitOfWork()
+
+
+def get_memory_service() -> AbstractMemoryService | None:
+    """Dependency for memory service."""
+    return None
+
+
+def get_ai_pattern_execution_service(
+    pattern_service: PatternService = Depends(get_pattern_service),
+    template_service: TemplateService = Depends(get_template_service),
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    context_service: ContextService = Depends(get_context_service),
+    ai_provider_service: AIProviderService = Depends(get_ai_provider_service),
+    uow: AbstractUnitOfWork = Depends(get_unit_of_work),
+    memory_service: AbstractMemoryService | None = Depends(get_memory_service),
+    a2a_client_adapter: A2AClientAdapter = Depends(get_a2a_client_adapter),
+) -> AIPatternExecutionService:
+    """Dependency for AI pattern execution service with all required dependencies."""
+    return AIPatternExecutionService(
+        pattern_service=pattern_service,
+        template_service=template_service,
+        strategy_service=strategy_service,
+        context_service=context_service,
+        ai_provider_service=ai_provider_service,
+        uow=uow,
+        memory_service=memory_service,
+        a2a_client_adapter=a2a_client_adapter,
+    )
+
+
+def get_a2a_capability_service() -> A2ACapabilityService:
+    """Dependency for A2A capability service."""
+    return A2ACapabilityService()
+
+
+def get_a2a_handler_service() -> A2AHandlerService:
+    """Dependency for A2A handler service."""
+    return A2AHandlerService()
+
+
+async def cleanup_dependencies():
+    """Cleanup function to close HTTP client and other resources."""
+    global _http_client
+    if _http_client:
+        await _http_client.aclose()
+        _http_client = None
 
 
 # Type Aliases for FastAPI dependencies
 UoWDep = Annotated[AbstractUnitOfWork, Depends(get_uow)]
-MessageBusDep = Annotated[AbstractMessageBus[DomainEvent], Depends(get_message_bus)]
+MessageBusDep = Annotated[AbstractMessageBus, Depends(get_message_bus)]

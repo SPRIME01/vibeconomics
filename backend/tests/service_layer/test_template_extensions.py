@@ -6,13 +6,24 @@ from app.adapters.activepieces_adapter import ActivePiecesAdapter
 from app.adapters.mem0_adapter import MemorySearchResult
 from app.service_layer.memory_service import MemoryService
 from app.service_layer.template_extensions import (
-    TemplateExtensionRegistry,  # Add this import
+    TemplateExtensionRegistry,
+    create_a2a_extensions, # Import the new factory
+    ExtensionArgumentError, # Import custom error
+    GenericRequestData, # Import GenericRequestData if it's moved to main file, or define locally
 )
 from app.service_layer.template_service import TemplateService
+from app.adapters.a2a_client_adapter import A2AClientAdapter # For mocking
+from unittest.mock import AsyncMock # For async mocks
+import pytest # For async tests and fixtures
+from pydantic import BaseModel, ConfigDict # For local GenericRequestData if not imported
 
 
 def test_memory_template_extension() -> None:
-    """Test that TemplateService processes memory:search extension correctly."""
+    """
+    Verifies that TemplateService correctly processes the memory:search extension in templates.
+    
+    Ensures that the memory service is called with the expected user ID and query, and that the template output includes formatted search results.
+    """
     # Arrange
     mock_memory_service = Mock(spec=MemoryService)
     mock_search_results: list[MemorySearchResult] = [
@@ -187,7 +198,9 @@ def test_debug_extension_parsing() -> None:
 
 # Add test to verify boundary detection
 def test_boundary_detection() -> None:
-    """Test the boundary detection specifically."""
+    """
+    Tests that the TemplateExtensionRegistry correctly detects extension boundaries and parses namespace, operation, and arguments from template strings.
+    """
     registry = TemplateExtensionRegistry()
 
     # Test simple case
@@ -209,3 +222,128 @@ def test_boundary_detection() -> None:
     assert namespace == "activepieces"
     assert operation == "run_workflow"
     assert args == 'wf_123:{"param1":"value1","param2":100}'
+
+
+# --- Tests for A2A Invoke Extension ---
+
+@pytest.fixture
+def mock_a2a_client_adapter_fixture() -> AsyncMock:
+    """
+    Creates an asynchronous mock instance of the A2AClientAdapter for testing purposes.
+    
+    Returns:
+        An AsyncMock object configured with the A2AClientAdapter specification.
+    """
+    return AsyncMock(spec=A2AClientAdapter)
+
+# If GenericRequestData is not globally available from template_extensions.py, define it here for tests
+# class GenericRequestData(BaseModel):
+# model_config = ConfigDict(extra='allow')
+
+
+@pytest.mark.asyncio
+async def test_a2a_invoke_extension_success(mock_a2a_client_adapter_fixture: AsyncMock):
+    # Arrange
+    """
+    Tests successful execution of the 'a2a_invoke' template extension with a mocked A2A client adapter.
+    
+    Verifies that the extension correctly parses arguments, wraps the payload in a GenericRequestData model, calls the adapter with expected parameters, and returns the adapter's response.
+    """
+    registry = TemplateExtensionRegistry()
+    a2a_extensions = create_a2a_extensions(mock_a2a_client_adapter_fixture)
+    registry.register("a2a_invoke", a2a_extensions["a2a_invoke"])
+
+    agent_url = "http://fakeagent.com"
+    capability_name = "summarize"
+    payload_dict = {"text": "long text to summarize"}
+    payload_json_str = json.dumps(payload_dict)
+    
+    gpt_args_str = f"agent_url={agent_url}:capability={capability_name}:payload={payload_json_str}"
+    
+    expected_response_data = {"summary": "This is a summary."}
+    mock_a2a_client_adapter_fixture.execute_remote_capability.return_value = expected_response_data
+    
+    # Act
+    extension_function = registry.get("a2a_invoke")
+    assert extension_function is not None
+    
+    result = await extension_function(gpt_args_str)
+    
+    # Assert
+    # Verify the adapter was called correctly
+    # The payload should be wrapped in GenericRequestData by the extension
+    # Or, if GenericRequestData is not used, it would be payload_dict directly.
+    # Based on the current _a2a_invoke_extension_async, it uses GenericRequestData.
+    
+    # Create the expected Pydantic model instance that the adapter should receive
+    # This requires GenericRequestData to be defined/imported.
+    # Assuming GenericRequestData is defined as in template_extensions.py
+    from app.service_layer.template_extensions import GenericRequestData as ActualGenericRequestData
+    expected_request_payload = ActualGenericRequestData(**payload_dict)
+
+    mock_a2a_client_adapter_fixture.execute_remote_capability.assert_called_once_with(
+        agent_url=agent_url,
+        capability_name=capability_name,
+        request_payload=expected_request_payload, # Check if this matches
+        response_model=None
+    )
+    
+    assert result == expected_response_data
+
+
+@pytest.mark.asyncio
+async def test_a2a_invoke_extension_parsing_errors(mock_a2a_client_adapter_fixture: AsyncMock):
+    # Arrange
+    """
+    Tests that the a2a_invoke extension raises ExtensionArgumentError for missing or invalid arguments.
+    
+    Verifies that missing 'agent_url', missing 'capability', or an invalid JSON payload in the argument string each result in the appropriate error being raised.
+    """
+    registry = TemplateExtensionRegistry()
+    a2a_extensions = create_a2a_extensions(mock_a2a_client_adapter_fixture)
+    registry.register("a2a_invoke", a2a_extensions["a2a_invoke"])
+    extension_function = registry.get("a2a_invoke")
+    assert extension_function is not None
+
+    # Test missing agent_url
+    bad_args_missing_agent_url = "capability=summarize:payload={}"
+    with pytest.raises(ExtensionArgumentError, match="Missing 'agent_url'"):
+        await extension_function(bad_args_missing_agent_url)
+
+    # Test missing capability
+    bad_args_missing_capability = "agent_url=http://fake.com:payload={}"
+    with pytest.raises(ExtensionArgumentError, match="Missing 'capability'"):
+        await extension_function(bad_args_missing_capability)
+
+    # Test invalid JSON payload
+    bad_args_invalid_json = "agent_url=http://fake.com:capability=summarize:payload=not_json"
+    with pytest.raises(ExtensionArgumentError, match="Invalid JSON payload"):
+        await extension_function(bad_args_invalid_json)
+
+
+@pytest.mark.asyncio
+async def test_a2a_invoke_extension_adapter_error(mock_a2a_client_adapter_fixture: AsyncMock):
+    # Arrange
+    """
+    Tests that the a2a_invoke extension propagates exceptions raised by the adapter.
+    
+    Asserts that when the underlying adapter raises a RuntimeError during execution,
+    the extension function also raises the same error.
+    """
+    registry = TemplateExtensionRegistry()
+    a2a_extensions = create_a2a_extensions(mock_a2a_client_adapter_fixture)
+    registry.register("a2a_invoke", a2a_extensions["a2a_invoke"])
+    extension_function = registry.get("a2a_invoke")
+    assert extension_function is not None
+
+    agent_url = "http://fakeagent.com"
+    capability_name = "summarize"
+    payload_dict = {"text": "long text"}
+    payload_json_str = json.dumps(payload_dict)
+    gpt_args_str = f"agent_url={agent_url}:capability={capability_name}:payload={payload_json_str}"
+
+    # Simulate an error from the adapter
+    mock_a2a_client_adapter_fixture.execute_remote_capability.side_effect = RuntimeError("Adapter network error")
+
+    with pytest.raises(RuntimeError, match="Adapter network error"):
+        await extension_function(gpt_args_str)
