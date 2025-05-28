@@ -826,9 +826,9 @@ async def test_execute_dspy_module_with_a2a_adapter(
     mock_context_service: MagicMock,
     mock_ai_provider_service: MagicMock,
     mock_uow: MagicMock,
-    mock_memory_service: MagicMock, # Added mock_memory_service
-    # Use AsyncMock for a2a_client_adapter as its methods are async
-    mock_a2a_client_adapter_instance: AsyncMock, 
+    mock_memory_service: MagicMock,  # Added mock_memory_service
+    # Use existing fixture and configure its async methods
+    mock_a2a_client_adapter: AsyncMock,
 ) -> None:
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -838,8 +838,14 @@ async def test_execute_dspy_module_with_a2a_adapter(
         ai_provider_service=mock_ai_provider_service,
         uow=mock_uow,
         memory_service=mock_memory_service,
-        a2a_client_adapter=mock_a2a_client_adapter_instance,
+        a2a_client_adapter=mock_a2a_client_adapter,
     )
+
+    # ensure the adapter’s async calls can be awaited
+    mock_a2a_client_adapter.execute_remote_capability = AsyncMock()
+
+    # …later in your assertions…
+    MockDSPyModuleClass.assert_called_once_with(a2a_adapter=mock_a2a_client_adapter)
 
     # Mock the DSPy module class (CollaborativeRAGModule in this case)
     MockDSPyModuleClass = MagicMock(spec=CollaborativeRAGModule)
