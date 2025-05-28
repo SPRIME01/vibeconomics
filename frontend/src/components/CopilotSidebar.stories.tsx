@@ -13,12 +13,32 @@ import { CopilotProviderDecorator } from '../../.storybook/copilot-decorator';
  * It attempts to echo the last user message.
  */
 const mockSuccessHandler = rest.post('/copilot/mock', async (req, res, ctx) => {
-  const body = await req.json() as { messages: { role: string, content: string }[] };
-  const lastMessage = body.messages?.[body.messages.length - 1];
-  const responseText = lastMessage?.content 
-    ? `Mock response to: "${lastMessage.content}" (Sidebar)` 
-    : "This is a successful mock response from the sidebar mock.";
-  return res(ctx.delay(500), ctx.json({ reply: responseText }));
+  try {
+    const body = await req.json();
+    
+    if (!body || !Array.isArray(body.messages)) {
+      return res(
+        ctx.status(400),
+        ctx.json({ error: 'Invalid request format' })
+      );
+    }
+    
+    const { messages } = body as { messages: { role: string; content: string }[] };
+    const lastMessage = messages[messages.length - 1];
+    const responseText = lastMessage?.content
+      ? `Mock response to: "${lastMessage.content}" (Sidebar)`
+      : "This is a successful mock response from the sidebar mock.";
+    
+    return res(
+      ctx.delay(500),
+      ctx.json({ reply: responseText })
+    );
+  } catch (error) {
+    return res(
+      ctx.status(400),
+      ctx.json({ error: 'Invalid JSON in request body' })
+    );
+  }
 });
 
 /**
