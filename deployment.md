@@ -280,6 +280,72 @@ There are GitHub Action workflows in the `.github/workflows` directory already c
 
 If you need to add extra environments you could use those as a starting point.
 
+## Storybook Deployment
+
+### Development Environment
+
+For development, Storybook can be run alongside the main application:
+
+```bash
+# Start Storybook with the main application stack
+docker compose -f docker-compose.yml -f docker-compose.storybook.yml up
+```
+
+This will make Storybook available at `http://localhost:6006`.
+
+### Production Storybook Deployment
+
+For production deployment of Storybook as a static site:
+
+1. **Build Static Storybook**:
+   ```bash
+   # In the frontend directory
+   npm run build-storybook
+   ```
+
+2. **Serve with Nginx** (Add to your docker-compose.yml):
+   ```yaml
+   storybook:
+     image: nginx:alpine
+     volumes:
+       - ./frontend/storybook-static:/usr/share/nginx/html
+     labels:
+       - traefik.enable=true
+       - traefik.http.routers.storybook.rule=Host(`storybook.${DOMAIN}`)
+       - traefik.http.routers.storybook.tls=true
+       - traefik.http.routers.storybook.tls.certresolver=le
+       - traefik.http.services.storybook.loadbalancer.server.port=80
+     networks:
+       - traefik-public
+   ```
+
+3. **Environment Variables for Storybook**:
+   Add these to your environment configuration:
+   ```bash
+   # For staging
+   export STORYBOOK_DOMAIN_STAGING=storybook.staging.fastapi-project.example.com
+
+   # For production
+   export STORYBOOK_DOMAIN_PRODUCTION=storybook.fastapi-project.example.com
+   ```
+
+### GitHub Actions for Storybook
+
+Add Storybook build and deployment to your CI/CD pipeline by including these steps in your GitHub Actions workflows:
+
+```yaml
+- name: Build Storybook
+  run: |
+    cd frontend
+    npm ci
+    npm run build-storybook
+
+- name: Deploy Storybook
+  run: |
+    # Copy storybook-static to your deployment location
+    rsync -av frontend/storybook-static/ user@server:/path/to/storybook/
+```
+
 ## URLs
 
 Replace `fastapi-project.example.com` with your domain.
@@ -296,6 +362,8 @@ Backend API docs: `https://api.fastapi-project.example.com/docs`
 
 Backend API base URL: `https://api.fastapi-project.example.com`
 
+Storybook: `https://storybook.fastapi-project.example.com`
+
 Adminer: `https://adminer.fastapi-project.example.com`
 
 ### Staging
@@ -305,5 +373,7 @@ Frontend: `https://dashboard.staging.fastapi-project.example.com`
 Backend API docs: `https://api.staging.fastapi-project.example.com/docs`
 
 Backend API base URL: `https://api.staging.fastapi-project.example.com`
+
+Storybook: `https://storybook.staging.fastapi-project.example.com`
 
 Adminer: `https://adminer.staging.fastapi-project.example.com`

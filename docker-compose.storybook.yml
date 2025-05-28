@@ -1,0 +1,42 @@
+# Docker Compose override for Storybook development
+# Usage: docker compose -f docker-compose.yml -f docker-compose.storybook.yml up
+
+version: '3.8'
+
+services:
+  storybook:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.storybook
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - STORYBOOK_TELEMETRY_DISABLED=1
+    command: npm run storybook:docker
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    networks:
+      - default
+
+  # Production Storybook (static build)
+  storybook-static:
+    image: nginx:alpine
+    volumes:
+      - ./frontend/storybook-static:/usr/share/nginx/html:ro
+    ports:
+      - "6007:80"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.storybook-static.rule=Host(`storybook.${DOMAIN:-localhost}`)
+      - traefik.http.routers.storybook-static.tls=true
+      - traefik.http.routers.storybook-static.tls.certresolver=le
+      - traefik.http.services.storybook-static.loadbalancer.server.port=80
+    networks:
+      - default
+    profiles:
+      - production

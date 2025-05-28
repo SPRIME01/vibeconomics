@@ -49,9 +49,17 @@ Workflow automation capabilities for AI-driven processes.
 ### 6. Additional AI Components
 
 - [Google Application Development Kit (ADK)](https://github.com/google/adk-python.git)
-- [Fabric](https://github.com/danielmiessler/fabric.git)
 - [CopilotKit](https://github.com/CopilotKit/CopilotKit.git) Integration
 - Advanced AI Workflow Orchestration
+
+### 7. Storybook Component Documentation
+
+Comprehensive component documentation and development environment for React UI components, featuring:
+
+- Interactive component development and testing
+- Automated documentation generation with accessibility testing
+- Multiple environment support (local development and Docker integration)
+- Visual regression testing capabilities
 
 ## Technology Stack
 
@@ -66,6 +74,7 @@ Workflow automation capabilities for AI-driven processes.
 - 🚀 [React](https://react.dev) for the frontend
   - 💃 Using TypeScript, hooks, Vite
   - 🎨 [Chakra UI](https://chakra-ui.com) for the frontend components
+  - 📚 [**Storybook**](https://storybook.js.org) for component development and documentation
   - 🤖 An automatically generated frontend client
   - 🧪 [Playwright](https://playwright.dev) for End-to-End testing
 - 🐋 [Docker Compose](https://www.docker.com) for development and production
@@ -115,6 +124,34 @@ Backend docs: [backend/README.md](./backend/README.md).
 ## Frontend Development
 
 Frontend docs: [frontend/README.md](./frontend/README.md).
+
+### Storybook Component Development
+
+Storybook is integrated for component development and documentation:
+
+```bash
+# Start Storybook locally
+cd frontend
+npm run storybook
+
+# Start Storybook with Docker
+docker compose -f docker-compose.yml -f docker-compose.storybook.yml up storybook
+
+# Build static Storybook for deployment
+npm run build-storybook
+```
+
+Storybook provides:
+
+- **Interactive Development**: Develop components in isolation with live reloading
+- **Automated Documentation**: Auto-generated docs from JSDoc comments and TypeScript definitions
+- **Accessibility Testing**: Built-in A11y addon for accessibility validation
+- **Visual Testing**: Multiple viewport testing and visual regression capabilities
+- **Component Controls**: Interactive controls for testing different component states
+
+Access Storybook at `http://localhost:6006` during development.
+
+For detailed Storybook usage and best practices, see [frontend/STORYBOOK.md](./frontend/STORYBOOK.md).
 
 ## Deployment
 
