@@ -15,16 +15,29 @@ class RemoteTaskResponse(BaseModel):
 
 
 class CollaborativeRAGModule(dspy.Module):
-    def __init__(self, a2a_adapter: A2AClientAdapter, remote_agent_url: str, remote_capability_name: str):
+    def __init__(self, a2a_adapter: A2AClientAdapter):
+        """
+        Initializes the CollaborativeRAGModule with an A2A client adapter and sets up the query generation prediction step.
+        
+        Args:
+            a2a_adapter: Adapter used for asynchronous agent-to-agent communication.
+        """
         super().__init__()
         self.a2a_adapter = a2a_adapter
-        self.remote_agent_url = remote_agent_url
-        self.remote_capability_name = remote_capability_name
         # For now, we'll include a simple dspy.Predict signature
         self.generate_query = dspy.Predict("input_question -> query_for_remote_agent")
 
     async def forward(self, input_question: str) -> str:
         # Generate a query using the dspy.Predict module
+        """
+        Generates a query from the input question, sends it to a remote agent, and returns the combined input and remote response.
+        
+        Args:
+            input_question: The question to be processed and sent to the remote agent.
+        
+        Returns:
+            A string combining the original input question and the data returned by the remote agent.
+        """
         generated_query_prediction = self.generate_query(input_question=input_question)
         generated_query = generated_query_prediction.query_for_remote_agent
 

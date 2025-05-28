@@ -39,7 +39,7 @@ class AIPatternExecutionService:
         """
         Initializes the AI pattern execution service with required domain and provider services.
         
-        This constructor sets up the service with dependencies for pattern management, template rendering, strategy and context retrieval, AI provider interaction, unit-of-work management, and optional memory and A2A client adapter services.
+        Sets up dependencies for pattern management, template rendering, strategy and context retrieval, AI provider interaction, unit-of-work management, and optionally memory access and agent-to-agent communication.
         """
         self.pattern_service = pattern_service
         self.template_service = template_service
@@ -57,24 +57,13 @@ class AIPatternExecutionService:
         **kwargs: Any, # These kwargs are intended for the module's constructor
     ) -> Any:
         """
-        Instantiates and executes a DSPy module.
-
-        Args:
-            module_class: The class of the DSPy module to instantiate (e.g., CollaborativeRAGModule).
-            module_input: The primary input for the module's `forward` method.
-                          If the forward method expects a single positional argument, this is it.
-                          If it expects keyword arguments, module_input should be a dictionary
-                          that will be unpacked (e.g. `**module_input`).
-                          For CollaborativeRAGModule, this is `input_question`.
-            **kwargs: Additional keyword arguments for instantiating the module.
-
-        Returns:
-            The result from the module's `forward` method.
+        Instantiates and asynchronously executes a DSPy module with dynamic constructor and input handling.
+        
+        If the module's constructor requires an `a2a_adapter`, it is injected from the service if available; otherwise, an `AttributeError` is raised. The module's `forward` method is called with the provided input: if `module_input` is a dictionary and the method accepts keyword arguments or matching parameter names, it is unpacked; otherwise, it is passed as a single argument. Returns the result of the module's `forward` method.
         
         Raises:
-            AttributeError: If a2a_adapter is required by module but not available in service.
-            NotImplementedError: If module_input is a dictionary for kwarg passing to forward,
-                                 as this needs more robust signature inspection of forward.
+            AttributeError: If the module requires an `a2a_adapter` but it is not available in the service.
+            NotImplementedError: If the handling of dictionary input for the `forward` method is ambiguous.
         """
         constructor_args = kwargs.copy()
         module_signature_params = inspect.signature(module_class.__init__).parameters
@@ -141,12 +130,14 @@ class AIPatternExecutionService:
         output_model: type[BaseModel] | None = None,
     ) -> Any:
         """
-        Executes an AI pattern by assembling prompt components, rendering the prompt, invoking AI completion, and managing conversation state.
+        Executes an AI pattern by constructing a prompt from conversation history, strategy, context, and pattern content, then obtains and returns an AI-generated response.
+        
+        The method manages conversation state, supports prompt customization via strategies and contexts, and optionally parses the AI response into a Pydantic model for structured output.
         
         Args:
-            pattern_name: The name of the AI pattern to execute.
-            input_variables: Variables to be used for prompt rendering and AI completion.
-            session_id: Optional conversation session identifier for maintaining context.
+            pattern_name: Name of the AI pattern to execute.
+            input_variables: Variables for prompt rendering and AI completion.
+            session_id: Optional identifier for maintaining conversation context.
             strategy_name: Optional strategy to influence prompt construction.
             context_name: Optional context to include in the prompt.
             model_name: Optional AI model name for completion.
