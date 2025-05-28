@@ -4,9 +4,14 @@ from app.core.base_aggregate import DomainEvent  # For type hint
 from app.service_layer.message_bus import AbstractMessageBus  # Removed EventT
 from app.service_layer.unit_of_work import AbstractUnitOfWork
 
+# Import the new router
+from app.entrypoints.api.routes import copilot_api
 from .dependencies import MessageBusDep, UoWDep, get_uow
 
 app = FastAPI(title="Vibeconomics Agentic Framework")
+
+# Include the Copilot API router
+app.include_router(copilot_api.router, prefix="/copilot", tags=["copilot"])
 
 
 # Example Event for testing

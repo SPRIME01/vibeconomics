@@ -1,4 +1,8 @@
-import type { Preview } from '@storybook/react-vite'
+import type { Preview } from '@storybook/react-vite';
+import { initialize, mswLoader } from 'msw-storybook-addon';
+
+// Initialize MSW
+initialize();
 
 const preview: Preview = {
   parameters: {
@@ -16,6 +20,8 @@ const preview: Preview = {
       test: 'todo'
     }
   },
+  // Add mswLoader to ensure MSW is active for stories
+  loaders: [mswLoader],
 };
 
 export default preview;

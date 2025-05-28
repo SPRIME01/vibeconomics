@@ -1,0 +1,258 @@
+import { Meta } from '@storybook/addon-docs';
+
+<Meta title="CopilotKit/Setup Guide" />
+
+# CopilotKit Setup and Configuration Guide
+
+This guide provides comprehensive instructions for setting up and configuring CopilotKit within this project.
+
+## 1. Introduction
+
+CopilotKit is a powerful framework that enables the integration of AI-powered features directly into your application. Its benefits include providing users with intelligent assistance, automating tasks through natural language chat interfaces, and enhancing user experience by making complex functionalities more accessible.
+
+Key components involved in a CopilotKit setup are:
+- **`@copilotkit/react-core`**: This package provides the fundamental logic and hooks necessary for CopilotKit to function. This includes essential hooks like `useCopilotAction` for defining custom actions that the AI can invoke, and `useCopilotReadable` for exposing frontend application state or context to the AI.
+- **`@copilotkit/react-ui`**: This package offers pre-built UI components that help you quickly assemble a user interface for CopilotKit features. A primary example is the `<CopilotSidebar />` component, which provides a ready-to-use chat interface.
+- **`@copilotkit/runtime`**: While potentially less of a direct focus for typical frontend setup, this package can be involved in more advanced backend scenarios or when implementing custom adapters for communication between the frontend, backend, and AI models.
+
+## 2. Installation
+
+To get started with CopilotKit, you need to install the necessary packages.
+
+```bash
+npm install @copilotkit/react-core @copilotkit/react-ui @copilotkit/runtime
+# or
+yarn add @copilotkit/react-core @copilotkit/react-ui @copilotkit/runtime
+```
+
+Ensure your project meets any peer dependency requirements, such as a compatible version of React (typically React 16.8+ for hooks, React 18+ recommended for latest features).
+
+## 3. Frontend Setup
+
+### 3.1. `CopilotKitProvider`
+
+The `CopilotKitProvider` component from `@copilotkit/react-core` is the cornerstone of your CopilotKit integration. It wraps your application (or the relevant parts that will use CopilotKit features) and provides the necessary context for all CopilotKit hooks and UI components to function.
+
+**Example (`App.tsx` or main layout):**
+```tsx
+// src/App.tsx (or your main application component)
+import { CopilotKitProvider } from "@copilotkit/react-core";
+// import { CopilotSidebar } from "@copilotkit/react-ui";
+// Example: Your integrated component that includes Sidebar and Actions
+// import CopilotIntegration from './components/CopilotIntegration'; 
+
+function App() {
+  // Determine the backend endpoint dynamically.
+  // Example using Vite environment variable:
+  const copilotApiBaseUrl = import.meta.env.VITE_COPILOT_API_URL || "/api/copilot"; 
+
+  return (
+    <CopilotKitProvider
+      // Endpoint for the CopilotKit backend services.
+      // This should point to your backend that handles text generation,
+      // action execution, etc. (e.g., the `/copilot/execute` endpoint on your FastAPI backend).
+      chatApiEndpoint={`${copilotApiBaseUrl}/execute`}
+
+      // Optional: Endpoint for custom action execution if it's different from chatApiEndpoint.
+      // If your backend separates these concerns, you can specify it here.
+      // actionApiEndpoint={`${copilotApiBaseUrl}/action`} 
+
+      // Optional: Specify custom headers, e.g., for authentication tokens.
+      // These headers will be sent with requests made by CopilotKit.
+      // headers={{
+      //   Authorization: `Bearer ${your_auth_token}`,
+      // }}
+
+      // Optional: Provide initial messages to populate the chat interface.
+      // initialMessages={[
+      //   {
+      //     id: 'initial-1',
+      //     content: 'Welcome to the AI Copilot! How can I assist you today?',
+      //     role: 'assistant',
+      //   },
+      // ]}
+    >
+      {/* Your Application Components */}
+      {/* <YourAppContent /> */}
+      {/* Example: Render an integrated component that uses CopilotKit */}
+      {/* <CopilotIntegration sidebarProps={{ defaultOpen: true }} /> */}
+      {/* Or, if you prefer to place the sidebar directly: */}
+      {/* <CopilotSidebar defaultOpen={true} /> */}
+    </CopilotKitProvider>
+  );
+}
+
+export default App;
+```
+
+### 3.2. Backend Endpoint Configuration
+
+CopilotKit's frontend components need to communicate with a backend service that handles AI interactions.
+
+- **Chat/Execution Endpoint:** (e.g., `/api/copilot/execute` in your application)
+  - **Purpose:** This is the primary endpoint for CopilotKit. It receives messages from the frontend, interacts with language models (like GPT), and routes requests to execute custom actions defined in your application.
+  - **Configuration:** This endpoint URL is provided to the `chatApiEndpoint` prop of the `CopilotKitProvider`.
+- **Storybook Mock Endpoint:** (e.g., `/copilot/mock`, configurable via `STORYBOOK_COPILOT_MOCK_API_URL`)
+  - **Purpose:** During Storybook development, a mock endpoint is used to provide predictable responses for CopilotKit components. This avoids reliance on a live backend and allows for testing various states (success, error, loading).
+  - **Configuration:** In this project, the `.storybook/copilot-decorator.tsx` configures the `CopilotKitProvider` to use this mock endpoint. The URL for this mock can be set using the `STORYBOOK_COPILOT_MOCK_API_URL` environment variable.
+
+### 3.3. Environment Variables
+
+Environment variables are used to configure the API endpoints for different environments.
+
+- **`VITE_COPILOT_API_URL`** (or similar for your specific frontend build tool, e.g., `REACT_APP_COPILOT_API_URL` for Create React App):
+  - **Usage:** Specifies the base URL for the CopilotKit backend in your deployed application (development, staging, production).
+  - **Example:** `VITE_COPILOT_API_URL=https://api.example.com/api/copilot`
+- **`STORYBOOK_COPILOT_MOCK_API_URL`**:
+  - **Usage:** Specifies the URL for the mock CopilotKit backend used in Storybook. This defaults to `/copilot/mock` in the `copilot-decorator.tsx` if the environment variable is not set.
+  - **Example:** `STORYBOOK_COPILOT_MOCK_API_URL=/custom-mock-api/copilot`
+
+## 4. Implementing Custom Actions (`useCopilotAction`)
+
+Custom actions allow the AI to invoke specific functions within your frontend application. These are defined using the `useCopilotAction` hook from `@copilotkit/react-core`. The `CopilotActions.tsx` component in this project serves as an example of how to group and define these actions.
+
+**Key concepts:**
+- **`useCopilotAction` hook**: Registers an action with the CopilotKit system.
+- **`name`**: A unique string that identifies the action (e.g., "createTask", "summarizeText").
+- **`description`**: A natural language description of what the action does. This is crucial for the AI to understand when and how to use the action.
+- **`parameters`**: An array of objects defining the arguments the action expects. Each parameter object should specify its `name`, `type` (e.g., "string", "number", "boolean"), `description`, and whether it's `required`. You can also provide an `enum` of possible values.
+- **`handler`**: An asynchronous function that contains the logic to execute when the action is invoked by the AI. It receives an object with the action's parameters as its argument.
+
+**Example Snippet (from `CopilotActions.tsx`):**
+```tsx
+// src/components/CopilotActions.tsx
+import { useCopilotAction } from '@copilotkit/react-core';
+
+// ...
+useCopilotAction({
+  name: "createTask",
+  description: "Creates a new task with the given title and description. Useful for managing to-do items or project tasks.",
+  parameters: [
+    { name: "title", type: "string", description: "The title of the task.", required: true },
+    { name: "description", type: "string", description: "An optional description for the task.", required: false },
+  ],
+  handler: async ({ title, description }) => {
+    // Action logic:
+    // For example, make an API call to your backend to create the task.
+    console.log("Attempting to create task:", title, description);
+    // const response = await fetch('/api/tasks', { /* ... */ });
+    // Handle response and potential errors.
+    // Provide feedback to the user or update application state.
+  },
+});
+// ...
+```
+
+**Best Practices for Actions:**
+- **Clarity:** Write clear, concise, and unambiguous descriptions and parameter definitions so the AI can accurately understand and use your actions.
+- **Focus:** Keep action handlers focused on a single task or capability.
+- **Performance:** Ensure handlers are performant, especially if they involve UI updates or network requests.
+- **Error Handling:** Implement robust error handling within your action handlers. Inform the user if an action fails.
+- **Security:** For actions that involve backend calls or modify data, ensure proper API endpoint security, authentication, and authorization.
+
+## 5. Exposing Frontend Context (`useCopilotReadable`)
+
+To enable the AI to provide more relevant and context-aware responses, you can expose parts of your frontend application's state or context using the `useCopilotReadable` hook from `@copilotkit/react-core`. The `CopilotSidebar.tsx` component in this project demonstrates an example of this by exposing page context.
+
+**Key concepts:**
+- **`useCopilotReadable` hook**: Makes a piece of data from your frontend readable by the Copilot system.
+- **`description`**: A textual description of what the data represents. This helps the AI understand the meaning and relevance of the data.
+- **`value`**: The actual data to expose. This can be a string, number, boolean, object, or array. The data should be serializable.
+- The AI can then use this exposed context to tailor its responses, suggestions, or decisions when invoking actions.
+
+**Example Snippet (from `CopilotSidebar.tsx`):**
+```tsx
+// src/components/CopilotSidebar.tsx
+import { useCopilotReadable } from '@copilotkit/react-core';
+import React, { useState } from 'react'; // Ensure React is imported if using JSX or hooks like useState
+
+// ...
+const [pageContext, setPageContext] = useState({ 
+  pageTitle: "Home Page",
+  userId: "user-123" 
+});
+
+// This makes the pageContext object available to the AI.
+useCopilotReadable({
+  description: "Contextual information about the current page, including its title and the active user's ID.",
+  value: pageContext,
+});
+
+// If you want to update the context, simply update the state:
+// setPageContext({ pageTitle: "Profile Page", userId: "user-456" });
+// The AI will get the updated value on its next turn or when it re-evaluates context.
+// ...
+```
+
+## 6. Storybook Integration
+
+This project's Storybook setup is configured to support development and testing of CopilotKit components.
+
+- **`frontend/.storybook/copilot-decorator.tsx`**:
+  - This custom decorator wraps stories with the `CopilotKitProvider`.
+  - It configures the provider to use a mock API endpoint (`/copilot/mock` by default, or the value of `STORYBOOK_COPILOT_MOCK_API_URL`) for Copilot interactions within Storybook.
+- **MSW (`msw-storybook-addon`)**:
+  - Mock Service Worker (MSW) is used to mock backend API calls that your CopilotKit components or actions might make.
+  - This includes mocking:
+    - The `/copilot/mock` endpoint to simulate AI responses and action routing.
+    - Any other backend APIs called by your custom actions (e.g., `/api/tasks` in `CopilotActions.stories.tsx`).
+  - Handlers for these mocks are typically defined in the `.stories.tsx` files.
+- **Environment Variable for Mock API**:
+  - `STORYBOOK_COPILOT_MOCK_API_URL`: Allows overriding the default `/copilot/mock` URL if needed for specific Storybook setups.
+
+**Example of a story using the decorator:**
+```tsx
+// src/components/MyCopilotComponent.stories.tsx
+import type { Meta, StoryObj } from '@storybook/react';
+import MyCopilotComponent from './MyCopilotComponent'; // Your component using CopilotKit features
+import { CopilotProviderDecorator } from '../../.storybook/copilot-decorator'; // Adjust path as needed
+
+export default {
+  title: 'Components/MyCopilotComponent',
+  component: MyCopilotComponent,
+  decorators: [CopilotProviderDecorator], // Essential for CopilotKit components
+  parameters: {
+    // MSW handlers specific to this component's stories
+    msw: {
+      handlers: [
+        // rest.post('/copilot/mock', (req, res, ctx) => { ... }),
+        // rest.post('/api/your-action-endpoint', (req, res, ctx) => { ... }),
+      ],
+    },
+  },
+} satisfies Meta<typeof MyCopilotComponent>;
+
+// Example Story
+// export const Default: Story = { args: { /* ... */ } };
+```
+
+## 7. Troubleshooting Common Issues
+
+- **AI not responding / Errors in console:**
+  - **`CopilotKitProvider` Setup:** Verify that `chatApiEndpoint` is correctly set and points to a running backend service or a correctly configured MSW mock.
+  - **Backend Issues:** Check your backend logs (if not using MSW). Is the `/copilot/execute` (or your mock) endpoint running, accessible, and free of errors?
+  - **CORS (Cross-Origin Resource Sharing):** Ensure your backend allows requests from the frontend's origin (and from Storybook's origin, typically `http://localhost:6006`, during development).
+  - **API Keys:** If your CopilotKit backend integrates with external AI services (e.g., OpenAI), ensure that any necessary API keys are correctly configured on the backend.
+- **Actions not being triggered:**
+  - **`useCopilotAction` Definition:** Is the action `name` unique? Are the `description` and `parameters` clear enough for the AI to understand and use the action appropriately?
+  - **AI Phrasing:** Try rephrasing your request to the AI. The AI's ability to trigger actions depends on matching your intent to the action's description and parameters.
+  - **Component Rendering:** Ensure that the component defining the actions (e.g., `CopilotActions.tsx`) is rendered and active within the component tree wrapped by `CopilotKitProvider`.
+- **Context not available to AI:**
+  - **`useCopilotReadable` Usage:** Check if the hook is called correctly with a meaningful `description` and a valid `value`.
+  - **Component Lifecycle:** Ensure the component that calls `useCopilotReadable` is currently rendered and part of the active component tree.
+- **Storybook issues:**
+  - **`CopilotProviderDecorator`:** Confirm that this decorator is applied to all stories that require CopilotKit functionality.
+  - **MSW Handlers:** Verify that your MSW handlers are correctly mocking the necessary endpoints (`/copilot/mock` and any action-specific API calls). Check the browser's console for MSW warnings or errors.
+  - **`STORYBOOK_COPILOT_MOCK_API_URL`:** If your `copilot-decorator.tsx` relies on this environment variable for the mock API URL, ensure it's correctly set if you're not using the default `/copilot/mock`.
+
+## 8. Advanced Configuration (Optional)
+
+CopilotKit offers flexibility for more advanced scenarios:
+- **Customizing UI Components:** While `@copilotkit/react-ui` provides components like `<CopilotSidebar />`, you can create your own custom UI and interact with the core logic using hooks from `@copilotkit/react-core`.
+- **Multiple CopilotKit Instances/Scopes:** For complex applications, you might need to manage different instances or scopes of CopilotKit, potentially with different configurations or action sets.
+- **Advanced Action Features:** Explore more complex action handlers that might involve client-side routing, sophisticated state management interactions, or chained operations.
+
+---
+
+This guide should help developers understand, implement, and troubleshoot CopilotKit features effectively within the project. For more in-depth information and advanced topics, always refer to the official CopilotKit documentation.
+```
