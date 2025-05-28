@@ -28,9 +28,7 @@ async def mock_httpx_client() -> AsyncMock:
 
 @pytest.fixture
 def a2a_client_adapter(mock_httpx_client: AsyncMock) -> A2AClientAdapter: # Type hint uses the imported adapter
-    # Instantiate the actual A2AClientAdapter
-    adapter = A2AClientAdapter(http_client=mock_httpx_client)
-    return adapter
+    return A2AClientAdapter(http_client=mock_httpx_client)
 
 
 @pytest.mark.asyncio
