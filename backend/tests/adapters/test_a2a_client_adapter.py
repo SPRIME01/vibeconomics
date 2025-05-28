@@ -22,8 +22,7 @@ class MyTestResponse(BaseModel):
 
 @pytest_asyncio.fixture
 async def mock_httpx_client() -> AsyncMock:
-    mock = AsyncMock(spec=httpx.AsyncClient)
-    return mock
+    return AsyncMock(spec=httpx.AsyncClient)
 
 
 @pytest.fixture
