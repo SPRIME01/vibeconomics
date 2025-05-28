@@ -8,10 +8,18 @@ from app.domain.a2a.models import SummarizeTextA2ARequest, SummarizeTextA2ARespo
 
 @pytest.fixture
 def a2a_capability_service() -> A2ACapabilityService:
+    """
+    Provides a pytest fixture that returns a new instance of A2ACapabilityService for use in tests.
+    """
     return A2ACapabilityService()
 
 
 def test_register_and_get_capability(a2a_capability_service: A2ACapabilityService):
+    """
+    Tests that a capability can be registered and then retrieved with correct metadata.
+    
+    Registers a capability named "SummarizeText" with specified metadata, retrieves it, and asserts that all attributes match the registered values.
+    """
     capability_metadata = CapabilityMetadata(
         name="SummarizeText",
         description="Summarizes a given text.",
@@ -31,6 +39,11 @@ def test_register_and_get_capability(a2a_capability_service: A2ACapabilityServic
 
 def test_reregister_capability_overwrites(a2a_capability_service: A2ACapabilityService):
     # Register the initial capability
+    """
+    Tests that re-registering a capability with the same name overwrites the existing capability's metadata.
+    
+    Registers a capability, retrieves and asserts its description, then re-registers with a different description and verifies that the updated metadata replaces the original.
+    """
     capability_metadata_1 = CapabilityMetadata(
         name="SummarizeText",
         description="Summarizes a given text.",
@@ -63,6 +76,11 @@ def test_get_nonexistent_capability(a2a_capability_service: A2ACapabilityService
 
 
 def test_list_capabilities(a2a_capability_service: A2ACapabilityService):
+    """
+    Tests that multiple capabilities can be registered and that all are returned by list_capabilities.
+    
+    Registers two distinct capabilities and asserts that both are present in the list returned by the service.
+    """
     capability1_metadata = CapabilityMetadata(
         name="SummarizeText",
         description="Summarizes a given text.",

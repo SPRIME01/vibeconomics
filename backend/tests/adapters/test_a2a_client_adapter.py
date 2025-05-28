@@ -22,11 +22,22 @@ class MyTestResponse(BaseModel):
 
 @pytest_asyncio.fixture
 async def mock_httpx_client() -> AsyncMock:
+    """
+    Asynchronously provides a mocked httpx.AsyncClient for use in tests.
+    
+    Returns:
+        An AsyncMock instance configured to mimic httpx.AsyncClient.
+    """
     return AsyncMock(spec=httpx.AsyncClient)
 
 
 @pytest.fixture
 def a2a_client_adapter(mock_httpx_client: AsyncMock) -> A2AClientAdapter: # Type hint uses the imported adapter
+    """
+    Creates an instance of A2AClientAdapter using a mocked asynchronous HTTP client.
+    
+    This fixture provides an adapter configured for testing with a mock HTTP client to avoid real network calls.
+    """
     return A2AClientAdapter(http_client=mock_httpx_client)
 
 
@@ -35,6 +46,11 @@ async def test_execute_remote_capability_success(
     a2a_client_adapter: A2AClientAdapter, 
     mock_httpx_client: AsyncMock
 ):
+    """
+    Tests that execute_remote_capability successfully sends a request and parses a valid response.
+    
+    Verifies that the adapter calls the correct URL with the expected payload and headers, and that the response is correctly parsed into the specified response model.
+    """
     agent_url = "http://fakeagent.com"
     capability_name = "test_capability"
     request_payload = MyTestRequest(data="input_data")
@@ -71,6 +87,12 @@ async def test_execute_remote_capability_http_error(
     a2a_client_adapter: A2AClientAdapter, 
     mock_httpx_client: AsyncMock
 ):
+    """
+    Tests that execute_remote_capability propagates HTTPStatusError when the HTTP client
+    raises a server error.
+    
+    Verifies that the exception contains the correct request and response details.
+    """
     agent_url = "http://fakeagent.com"
     capability_name = "test_capability_http_error"
     request_payload = MyTestRequest(data="input_data_http_error")
@@ -96,6 +118,11 @@ async def test_execute_remote_capability_network_error(
     a2a_client_adapter: A2AClientAdapter, 
     mock_httpx_client: AsyncMock
 ):
+    """
+    Tests that a network error during capability execution is properly propagated.
+    
+    Simulates a network failure when the adapter attempts to execute a remote capability and asserts that the resulting `httpx.NetworkError` is raised.
+    """
     agent_url = "http://fakeagent.com"
     capability_name = "test_capability_network_error"
     request_payload = MyTestRequest(data="input_data_network_error")
@@ -118,6 +145,14 @@ async def test_execute_remote_capability_invalid_response_payload(
     a2a_client_adapter: A2AClientAdapter, 
     mock_httpx_client: AsyncMock
 ):
+    """
+    Tests that execute_remote_capability raises a ValidationError when the HTTP response
+    payload does not conform to the expected response model schema.
+    
+    Simulates a successful HTTP response with an invalid JSON payload missing required
+    fields, and asserts that a Pydantic ValidationError is raised with details about
+    the missing field.
+    """
     agent_url = "http://fakeagent.com"
     capability_name = "test_capability_invalid_payload"
     request_payload = MyTestRequest(data="input_data_invalid_payload")

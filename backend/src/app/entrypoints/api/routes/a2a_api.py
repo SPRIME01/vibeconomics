@@ -17,6 +17,21 @@ async def execute_capability(
     a2a_service: A2ACapabilityService = Depends(),
     handler_service: A2AHandlerService = Depends() # Using A2AHandlerService as per instructions
 ) -> Any: # Return type will be dynamic based on capability.output_schema
+    """
+    Executes a specified capability by validating input data, invoking the handler, and returning a validated response.
+    
+    Validates the incoming request against the capability's input schema, dispatches the request to the handler service, and ensures the handler's response conforms to the capability's output schema. Returns the validated response or raises appropriate HTTP errors for missing schemas, validation failures, or unexpected handler results.
+    
+    Args:
+        capability_name: The name of the capability to execute.
+        request_data: The JSON payload to be validated against the capability's input schema.
+    
+    Returns:
+        The validated response matching the capability's output schema.
+    
+    Raises:
+        HTTPException: If the capability is not found, schemas are missing, input or output validation fails, or the handler returns an unexpected result.
+    """
     capability = a2a_service.get_capability(capability_name)
     if not capability:
         raise HTTPException(status_code=404, detail=f"Capability '{capability_name}' not found")
