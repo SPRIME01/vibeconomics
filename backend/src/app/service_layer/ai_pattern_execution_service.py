@@ -30,6 +30,11 @@ class AIPatternExecutionService:
         memory_service: AbstractMemoryService | None = None,
         a2a_client_adapter: A2AClientAdapter | None = None, # Add a2a_client_adapter
     ):
+        """
+        Initializes the AI pattern execution service with required domain and provider services.
+        
+        This constructor sets up the service with dependencies for pattern management, template rendering, strategy and context retrieval, AI provider interaction, unit-of-work management, and optional memory and A2A client adapter services.
+        """
         self.pattern_service = pattern_service
         self.template_service = template_service
         self.strategy_service = strategy_service
@@ -49,6 +54,25 @@ class AIPatternExecutionService:
         model_name: str | None = None,
         output_model: type[BaseModel] | None = None,
     ) -> Any:
+        """
+        Executes an AI pattern by assembling prompt components, rendering the prompt, invoking AI completion, and managing conversation state.
+        
+        Args:
+            pattern_name: The name of the AI pattern to execute.
+            input_variables: Variables to be used for prompt rendering and AI completion.
+            session_id: Optional conversation session identifier for maintaining context.
+            strategy_name: Optional strategy to influence prompt construction.
+            context_name: Optional context to include in the prompt.
+            model_name: Optional AI model name for completion.
+            output_model: Optional Pydantic model class for structured output parsing.
+        
+        Returns:
+            The AI response as a string, or a parsed Pydantic model instance if `output_model` is provided.
+        
+        Raises:
+            EmptyRenderedPromptError: If the rendered prompt is empty or contains only whitespace.
+            ValidationError: If parsing the AI response into the specified output model fails.
+        """
         conversation: Conversation | None = None
         prompt_parts: list[str] = []
 

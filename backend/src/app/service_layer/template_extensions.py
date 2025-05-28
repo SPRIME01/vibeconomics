@@ -229,28 +229,51 @@ class TemplateExtensionRegistry:
     """Registry for template extensions that can be called from templates."""
 
     def __init__(self) -> None:
+        """
+        Initializes the TemplateExtensionRegistry with an empty registry for extension functions.
+        """
         self._extensions: dict[str, Callable[..., Any]] = {} # Allow async callables returning Any (e.g. dict or str)
 
     def register(self, name: str, func: Callable[..., Any]) -> None:
-        """Register a template extension function (can be async)."""
+        """
+        Registers a template extension function under the specified name.
+        
+        The function can be synchronous or asynchronous and will be available for template processing via this registry.
+        
+        Args:
+            name: The unique name to associate with the extension function.
+            func: The extension function to register.
+        """
         self._extensions[name] = func
 
     def get(self, name: str) -> Callable[..., Any] | None:
-        """Get a registered extension function."""
+        """
+        Retrieves a registered extension function by name.
+        
+        Args:
+            name: The name of the extension function to retrieve.
+        
+        Returns:
+            The registered extension function if found, otherwise None.
+        """
         return self._extensions.get(name)
 
     def list_extensions(self) -> dict[str, Callable[..., Any]]:
-        """List all registered extensions."""
+        """
+        Returns a dictionary of all registered template extension functions.
+        
+        Each key is the extension name, and each value is the corresponding callable.
+        """
         return self._extensions.copy() # Corrected from self.list_extensions()
 
     def _find_extension_boundaries(
         self, template: str
     ) -> list[tuple[int, int, str, str, str]]:
         """
-        Find all extension boundaries in the template.
-
+        Parses the template string to locate all extension calls and their boundaries.
+        
         Returns:
-            List of tuples: (start_pos, end_pos, namespace, operation, args)
+            A list of tuples, each containing the start and end positions of the extension in the template, the namespace, operation, and argument string for each extension found.
         """
         extensions = []
         i = 0
@@ -348,7 +371,18 @@ class TemplateExtensionRegistry:
     async def process_template_extensions(
         self, template: str, variables: dict[str, Any]
     ) -> str:
-        """Process template extensions in the format {{namespace:operation:args}}."""
+        """
+        Processes all template extensions in the given string and replaces them with their evaluated results.
+        
+        Scans the template for extension calls in the format `{{namespace:operation:args}}`, parses their arguments according to extension type, and invokes the corresponding registered extension functions (supporting both synchronous and asynchronous functions). Replaces each extension call in the template with the function's result, converting dictionaries or lists to JSON strings. On error, inserts an error message in place of the extension.
+        
+        Args:
+            template: The template string containing extension calls.
+            variables: A dictionary of variables available for extension processing.
+        
+        Returns:
+            The template string with all extensions replaced by their evaluated results.
+        """
         processed_template = template
 
         # Process extensions from right to left to maintain positions
@@ -455,13 +489,10 @@ def create_memory_extensions(
     memory_service: AbstractMemoryService,
 ) -> dict[str, Callable[..., str]]:
     """
-    Create memory-related template extensions bound to a memory service.
-
-    Args:
-        memory_service: The memory service instance to use
-
+    Creates memory-related template extension functions bound to the provided memory service.
+    
     Returns:
-        Dictionary of extension functions
+        A dictionary containing extension functions for searching and adding memories, suitable for use in template processing.
     """
 
     def bound_memory_search(user_id: str, query: str, limit: int = 5) -> str:
@@ -497,13 +528,26 @@ class GenericRequestData(BaseModel):
 
 def create_a2a_extensions(adapter: A2AClientAdapter) -> dict[str, Callable[..., Any]]:
     """
-    Create A2A-related template extensions bound to an A2AClientAdapter.
+    Creates A2A template extensions bound to the provided A2AClientAdapter.
+    
+    Returns:
+        A dictionary containing the asynchronous 'a2a_invoke' extension function, which performs an A2A remote capability call using colon-separated key-value arguments for agent URL, capability name, and a JSON payload. The extension returns the response as a dictionary or raises ExtensionArgumentError on invalid input.
     """
     async def _a2a_invoke_extension_async(gpt_args_str: str) -> dict:
         """
-        Template extension for A2A calls.
-        Format: {{a2a:invoke:agent_url=<URL>:capability=<NAME>:payload=<JSON_STRING_OR_VAR>}}
-        Payload should be a JSON string.
+        Invokes a remote capability on an A2A agent using provided arguments.
+        
+        Parses a colon-separated argument string to extract the agent URL, capability name, and a JSON payload, then calls the adapter's `execute_remote_capability` asynchronously. Raises `ExtensionArgumentError` if required arguments are missing or the payload is not valid JSON.
+        
+        Args:
+            gpt_args_str: Colon-separated key=value pairs specifying 'agent_url', 'capability', and 'payload' (as a JSON string).
+        
+        Returns:
+            The response from the remote capability as a dictionary.
+        
+        Raises:
+            ExtensionArgumentError: If required arguments are missing or the payload is invalid JSON.
+            RuntimeError: If the adapter is not available.
         """
         agent_url = ""
         capability_name = ""
@@ -559,13 +603,10 @@ def create_activepieces_extensions(
     activepieces_adapter: AbstractActivePiecesAdapter,
 ) -> dict[str, Callable[..., str]]:
     """
-    Create ActivePieces-related template extensions bound to an ActivePieces adapter.
-
-    Args:
-        activepieces_adapter: The ActivePieces adapter instance to use.
-
+    Creates template extension functions for running ActivePieces workflows.
+    
     Returns:
-        Dictionary of extension functions.
+        A dictionary containing the 'activepieces_run_workflow' extension function, which executes a workflow using the provided ActivePieces adapter. The function accepts a workflow ID and input data as a JSON string, returning the workflow result as a JSON string or an error message if execution fails.
     """
 
     def bound_activepieces_run_workflow(workflow_id: str, input_data_str: str) -> str:
@@ -598,13 +639,18 @@ def create_activepieces_extensions(
 
 def parse_extension_call(extension_text: str) -> tuple[str, dict[str, Any]]:
     """
-    Parse extension call syntax like 'memory:search:user123:my query'.
-
+    Parses an extension call string into its extension name and argument dictionary.
+    
+    Supports specific parsing for 'memory:search' (user_id and query) and 'activepieces:run_workflow' (workflow_id and input JSON). For other extensions, passes the remaining argument string as 'gpt_args_str' for further parsing by the extension itself.
+    
     Args:
-        extension_text: The extension call text
-
+        extension_text: The extension call string, e.g., 'memory:search:user123:my query'.
+    
     Returns:
-        Tuple of (extension_name, kwargs)
+        A tuple containing the extension name (e.g., 'memory:search') and a dictionary of parsed arguments.
+    
+    Raises:
+        ValueError: If the extension syntax is invalid or required arguments are missing.
     """
     # Only split on the first two colons; everything after is a single argument
     parts = extension_text.split(":", 2)

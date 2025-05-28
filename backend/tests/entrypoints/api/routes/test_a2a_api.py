@@ -14,6 +14,12 @@ from app.domain.a2a.models import SummarizeTextA2ARequest, SummarizeTextA2ARespo
 
 @pytest.fixture
 def mock_a2a_capability_service() -> AsyncMock:
+    """
+    Creates a mocked A2ACapabilityService with a predefined "SummarizeText" capability.
+    
+    The returned mock service's get_capability method always returns a CapabilityMetadata
+    instance for the "SummarizeText" capability, including mocked input/output schemas and handler.
+    """
     mock_service = AsyncMock(spec=A2ACapabilityService)
     
     # Define a sample CapabilityMetadata for "SummarizeText"
@@ -32,6 +38,12 @@ def mock_a2a_capability_service() -> AsyncMock:
 @pytest.fixture
 def mock_a2a_handler_service() -> AsyncMock:
     # Use the actual A2AHandlerService for spec
+    """
+    Creates an AsyncMock of A2AHandlerService with a mocked handle_a2a_request method returning a fixed SummarizeTextA2AResponse instance.
+    
+    Returns:
+        An AsyncMock instance of A2AHandlerService with handle_a2a_request preset to return a mocked summary response.
+    """
     mock_service = AsyncMock(spec=A2AHandlerService) 
     # The actual router expects the handler_service to return a Pydantic model or a dict
     # that can be parsed by capability.output_schema.
@@ -45,6 +57,12 @@ def test_app(
     mock_a2a_capability_service: AsyncMock, 
     mock_a2a_handler_service: AsyncMock 
 ) -> FastAPI:
+    """
+    Creates a FastAPI application instance with the A2A API router and overrides for capability and handler service dependencies using provided mocks.
+    
+    Returns:
+        A FastAPI app configured for testing with mocked service dependencies.
+    """
     app = FastAPI()
     
     # Use the actual imported router
@@ -61,6 +79,12 @@ def test_app(
 
 @pytest.fixture
 def client(test_app: FastAPI) -> TestClient:
+    """
+    Provides a TestClient instance for the given FastAPI application.
+    
+    Returns:
+        A TestClient configured to send HTTP requests to the supplied FastAPI app.
+    """
     return TestClient(test_app)
 
 
@@ -69,6 +93,14 @@ def test_execute_summarize_text_capability(
     mock_a2a_capability_service: AsyncMock, 
     mock_a2a_handler_service: AsyncMock # Changed parameter
 ):
+    """
+    Tests successful execution of the 'SummarizeText' capability via the A2A API.
+    
+    Sends a valid request to the '/a2a/execute/SummarizeText' endpoint and verifies that:
+    - The response status is 200 and contains the expected summary.
+    - The capability service's 'get_capability' method is called with the correct capability name.
+    - The handler service's 'handle_a2a_request' method is called with the correct arguments, including a properly parsed request model.
+    """
     payload = {"text_to_summarize": "This is a test."}
     # Correct way to pass request body for a Pydantic model in TestClient
     # The placeholder endpoint doesn't dynamically use SummarizeTextA2ARequest,
@@ -101,6 +133,11 @@ def test_execute_summarize_text_capability(
 
 def test_execute_capability_not_found(client: TestClient, mock_a2a_capability_service: AsyncMock):
     # Configure the mock to return None for "UnknownCapability"
+    """
+    Tests that executing an unknown capability returns a 404 error with the appropriate message.
+    
+    Sends a POST request to the execute endpoint with a capability name that does not exist and verifies that the response status is 404 and the error message indicates the capability was not found.
+    """
     mock_a2a_capability_service.get_capability.return_value = None
     
     response = client.post("/a2a/execute/UnknownCapability", json={"data": "some data"})
@@ -113,6 +150,11 @@ def test_execute_capability_not_found(client: TestClient, mock_a2a_capability_se
 
 def test_execute_capability_invalid_input(client: TestClient, mock_a2a_capability_service: AsyncMock):
     # Get the valid capability metadata for SummarizeText
+    """
+    Tests that executing the SummarizeText capability with invalid input returns a 422 validation error.
+    
+    Sends a POST request with a payload missing required fields and asserts that the response contains Pydantic validation error details for the missing field.
+    """
     summarize_text_capability = CapabilityMetadata(
         name="SummarizeText",
         description="Summarizes a given text.",
