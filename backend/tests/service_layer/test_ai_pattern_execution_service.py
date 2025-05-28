@@ -940,9 +940,8 @@ async def test_execute_dspy_module_without_a2a_adapter_if_not_needed(
     # Patch dspy.settings.lm
     mock_dspy_lm = MagicMock(spec=dspy.dsp.LM)
     with patch('dspy.settings.lm', mock_dspy_lm), \
-         patch.object(SimpleDSPyModule, '__init__', return_value=None) as mock_simple_init, \
          patch.object(SimpleDSPyModule, 'forward', new_callable=AsyncMock) as mock_simple_forward:
-        
+
         # Configure mock_simple_forward return value
         mock_simple_forward.return_value = "simple_output_from_mocked_forward"
 
