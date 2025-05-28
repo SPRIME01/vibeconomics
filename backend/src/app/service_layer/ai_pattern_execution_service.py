@@ -103,29 +103,25 @@ class AIPatternExecutionService:
         # If module_input is a dict and forward expects kwargs, use **module_input.
         # For now, we assume module_input directly maps to the first arg of forward or is handled by the module.
         # A more robust solution would inspect `module_instance.forward` signature.
-        if isinstance(module_input, dict) and not (len(inspect.signature(module_instance.forward).parameters) == 1 and next(iter(inspect.signature(module_instance.forward).parameters)) == 'self'):
-             # Check if forward takes kwargs by inspecting its signature
-            forward_params = inspect.signature(module_instance.forward).parameters
-            if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in forward_params.values()): # **kwargs present
-                result = await module_instance.forward(**module_input)
-            elif all(k in forward_params for k in module_input.keys()): # all keys in module_input are named params
-                 result = await module_instance.forward(**module_input)
-            else:
-                # This case is ambiguous: module_input is a dict, but forward doesn't clearly take **kwargs
-                # or all keys as named parameters. We'll pass it as a single dict argument.
-                # This might be an error for modules not expecting a dict as their first arg.
-                # Example: CollaborativeRAGModule expects input_question (str), not a dict.
-                # The user of execute_dspy_module must ensure module_input matches the forward method's expectation.
-                # For CollaborativeRAGModule, module_input should be the string for input_question.
-                # If module_input *is* the dict of kwargs for forward, then the signature above should be different.
-                # The subtask mentioned "module_instance.forward(module_input)", implying direct pass.
-                # Let's stick to direct pass for a single argument.
-                # If module_input is a dict and intended for multiple args in forward, the caller needs to be specific.
-                # For now, this path will assume module_input is the single expected argument.
-                # This means if module_input is a dict, it's passed as that dict object.
-                 result = await module_instance.forward(module_input)
+        forward_sig = inspect.signature(module_instance.forward)
+        arg_names = [p.name for p in forward_sig.parameters.values() if p.name != "self"]
 
-        else: # module_input is not a dict, or forward is simple (e.g. only self)
+        if isinstance(module_input, dict):
+            if set(module_input.keys()) <= set(arg_names) or any(
+                p.kind == inspect.Parameter.VAR_KEYWORD for p in forward_sig.parameters.values()
+            ):
+                result = await module_instance.forward(**module_input)
+            else:
+                raise TypeError(
+                    f"Keys {module_input.keys()} do not match parameters {arg_names} "
+                    f"of {module_class.__name__}.forward"
+                )
+        else:
+            if len(arg_names) != 1:
+                raise TypeError(
+                    f"{module_class.__name__}.forward expects {len(arg_names)} arguments, "
+                    "but a single positional value was supplied."
+                )
             result = await module_instance.forward(module_input)
             
         return result
