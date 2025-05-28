@@ -57,6 +57,12 @@ def mock_a2a_client_adapter() -> mock.Mock:
 
 @pytest.fixture
 def mock_uow() -> mock.Mock:
+    """
+    Creates a mock instance of AbstractUnitOfWork with async context manager and conversation repository methods.
+    
+    Returns:
+        A mock object simulating an AbstractUnitOfWork, including async methods for context management, conversation operations, and commit.
+    """
     uow_mock = mock.Mock(spec=AbstractUnitOfWork)
     uow_mock.__aenter__ = mock.AsyncMock(return_value=uow_mock)
     uow_mock.__aexit__ = mock.AsyncMock(return_value=None)
@@ -783,6 +789,9 @@ async def test_execute_pattern_with_a2a_client_adapter_available(
     mock_a2a_client_adapter: mock.Mock,
 ) -> None:
     # Arrange
+    """
+    Tests that the AIPatternExecutionService passes the A2A client adapter to the template rendering context and returns the expected AI response when available.
+    """
     mock_pattern_service.get_pattern_content = mock.AsyncMock(
         return_value="Pattern with A2A integration"
     )
@@ -830,6 +839,11 @@ async def test_execute_dspy_module_with_a2a_adapter(
     # Use existing fixture and configure its async methods
     mock_a2a_client_adapter: AsyncMock,
 ) -> None:
+    """
+    Tests that `execute_dspy_module` correctly instantiates a DSPy module requiring an `a2a_adapter`, calls its async `forward` method with the provided input, and returns the expected output.
+    
+    Mocks the DSPy module class and its `forward` method, patches the DSPy language model, and verifies that the adapter is passed to the module constructor, the input is forwarded, and the result matches the mocked output.
+    """
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
         template_service=mock_template_service,
@@ -900,6 +914,12 @@ async def test_execute_dspy_module_with_a2a_adapter(
 # Define a simple DSPy module for the next test
 class SimpleDSPyModule(dspy.Module):
     def __init__(self, an_arg: str = "default"): # Does not take a2a_adapter
+        """
+        Initializes the SimpleDSPyModule with an optional argument and a mocked predictor.
+        
+        Args:
+            an_arg: Optional argument for the module, defaults to "default".
+        """
         super().__init__()
         self.an_arg = an_arg
         # Mock the predictor part if it involves an LM call for this simple module
@@ -915,6 +935,15 @@ class SimpleDSPyModule(dspy.Module):
         # prediction = self.predictor(text_input=text_input)
         # return prediction.result
         # For the test, we can make it simpler if self.predictor is pre-configured:
+        """
+        Processes the input text using the module's predictor and returns the prediction result.
+        
+        Args:
+            text_input: The input string to be processed by the predictor.
+        
+        Returns:
+            The result produced by the predictor for the given input.
+        """
         return self.predictor(text_input=text_input).result
 
 
@@ -929,6 +958,15 @@ async def test_execute_dspy_module_without_a2a_adapter_if_not_needed(
     mock_memory_service: MagicMock,
     mock_a2a_client_adapter_instance: AsyncMock, # Service can have it
 ) -> None:
+    """
+    Tests that `execute_dspy_module` correctly instantiates and executes a DSPy module
+    that does not require an `a2a_adapter`, ensuring only relevant constructor arguments
+    are passed and the module's `forward` method is called with the input.
+    
+    Asserts that the module is instantiated without the `a2a_adapter` argument, the
+    `forward` method is invoked with the provided input, and the returned result matches
+    the mocked output.
+    """
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
         template_service=mock_template_service,
@@ -1005,6 +1043,12 @@ async def test_execute_dspy_module_raises_if_adapter_needed_but_missing(
     mock_memory_service: MagicMock,
 ) -> None:
     # Instantiate service WITHOUT a2a_client_adapter
+    """
+    Tests that executing a DSPy module requiring an a2a_adapter raises an AttributeError
+    when the adapter is not provided to the service.
+    
+    Asserts that the error message indicates the missing adapter requirement.
+    """
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
         template_service=mock_template_service,

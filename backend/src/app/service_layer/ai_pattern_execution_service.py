@@ -37,9 +37,9 @@ class AIPatternExecutionService:
         a2a_client_adapter: A2AClientAdapter | None = None, # Add a2a_client_adapter
     ):
         """
-        Initializes the AI pattern execution service with required domain and provider services.
+        Initializes the AI pattern execution service with required dependencies.
         
-        This constructor sets up the service with dependencies for pattern management, template rendering, strategy and context retrieval, AI provider interaction, unit-of-work management, and optional memory and A2A client adapter services.
+        Sets up the service for AI pattern execution by injecting services for pattern management, template rendering, strategy and context retrieval, AI provider interaction, unit-of-work management, and optional memory and A2A client adapter support.
         """
         self.pattern_service = pattern_service
         self.template_service = template_service
@@ -57,24 +57,21 @@ class AIPatternExecutionService:
         **kwargs: Any, # These kwargs are intended for the module's constructor
     ) -> Any:
         """
-        Instantiates and executes a DSPy module.
-
+        Instantiates and executes a DSPy module with the provided input.
+        
+        If the module's constructor requires an `a2a_adapter` and one is available in the service, it is injected automatically; otherwise, an `AttributeError` is raised if required. The method then creates an instance of the module and asynchronously calls its `forward` method, passing `module_input` either as a single argument or unpacked as keyword arguments, depending on the method's signature.
+        
         Args:
-            module_class: The class of the DSPy module to instantiate (e.g., CollaborativeRAGModule).
-            module_input: The primary input for the module's `forward` method.
-                          If the forward method expects a single positional argument, this is it.
-                          If it expects keyword arguments, module_input should be a dictionary
-                          that will be unpacked (e.g. `**module_input`).
-                          For CollaborativeRAGModule, this is `input_question`.
-            **kwargs: Additional keyword arguments for instantiating the module.
-
+            module_class: The DSPy module class to instantiate.
+            module_input: Input for the module's `forward` method; can be a single value or a dictionary for keyword arguments.
+            **kwargs: Additional keyword arguments for the module's constructor.
+        
         Returns:
-            The result from the module's `forward` method.
+            The result returned by the module's `forward` method.
         
         Raises:
-            AttributeError: If a2a_adapter is required by module but not available in service.
-            NotImplementedError: If module_input is a dictionary for kwarg passing to forward,
-                                 as this needs more robust signature inspection of forward.
+            AttributeError: If the module requires an `a2a_adapter` but none is available.
+            NotImplementedError: If `module_input` is a dictionary and the method cannot robustly determine how to unpack it for the `forward` method.
         """
         constructor_args = kwargs.copy()
         module_signature_params = inspect.signature(module_class.__init__).parameters
@@ -139,10 +136,12 @@ class AIPatternExecutionService:
         """
         Executes an AI pattern by assembling prompt components, rendering the prompt, invoking AI completion, and managing conversation state.
         
+        This method constructs a prompt from conversation history, strategy, context, and pattern content, then renders it using the provided input variables. It requests a completion from the AI provider and updates or creates the conversation session accordingly. If an output model is specified, the AI response is parsed into that model; otherwise, the raw response is returned.
+        
         Args:
-            pattern_name: The name of the AI pattern to execute.
-            input_variables: Variables to be used for prompt rendering and AI completion.
-            session_id: Optional conversation session identifier for maintaining context.
+            pattern_name: Name of the AI pattern to execute.
+            input_variables: Variables for prompt rendering and AI completion.
+            session_id: Optional identifier for maintaining conversation context.
             strategy_name: Optional strategy to influence prompt construction.
             context_name: Optional context to include in the prompt.
             model_name: Optional AI model name for completion.
