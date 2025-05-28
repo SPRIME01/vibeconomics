@@ -81,15 +81,12 @@ class A2AClientAdapter:
         except ValidationError as e:
             # Re-raise Pydantic validation errors if response_data doesn't match response_model
             # This is only relevant if response_model is not None.
-            # If response_model is None, this validation error shouldn't be raised from here
-            # unless response_data itself cannot be parsed by response_model, which is covered if response_model is not None.
-            if response_model: # Only raise ValidationError if a model was expected
+            if response_model:
                 raise e
-            else: # If no model was expected, this is an unexpected path for ValidationError
-                # This case should ideally not be hit if response_model is None,
-                # as Pydantic validation won't be attempted on a specific model.
-                # However, keeping it for robustness in case of an unexpected scenario.
-                raise RuntimeError(f"Unexpected ValidationError when no response_model was specified: {e}") from e
+            # If response_model is None, ValidationError should not occur here from the parsing step.
+            # Any other unexpected ValidationError might indicate a deeper issue, but this specific catch
+            # for the None case seems unnecessary based on the logic flow.
+
         
         except Exception as e:
             # Catch any other unexpected errors during the process
