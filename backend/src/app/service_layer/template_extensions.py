@@ -372,13 +372,13 @@ class TemplateExtensionRegistry:
         self, template: str, variables: dict[str, Any]
     ) -> str:
         """
-        Processes all template extensions in the given string and replaces them with their evaluated results.
+        Processes and replaces all template extension calls in the input string with their evaluated results.
         
-        Scans the template for extension calls in the format `{{namespace:operation:args}}`, parses their arguments according to extension type, and invokes the corresponding registered extension functions (supporting both synchronous and asynchronous functions). Replaces each extension call in the template with the function's result, converting dictionaries or lists to JSON strings. On error, inserts an error message in place of the extension.
+        Scans the template for extension calls in the format `{{namespace:operation:args}}`, parses arguments according to the extension type, and invokes the corresponding registered extension functions (supporting both synchronous and asynchronous functions). If an extension function returns a tuple `(actual_result, output_var_name)`, the result is stored in the `variables` dictionary under the specified name and the extension is replaced with an empty string. Otherwise, the extension is replaced with the function's result, serialized to JSON if it is a dictionary or list.
         
         Args:
             template: The template string containing extension calls.
-            variables: A dictionary of variables available for extension processing.
+            variables: A dictionary for storing variables produced by extension functions.
         
         Returns:
             The template string with all extensions replaced by their evaluated results.
@@ -535,34 +535,30 @@ class GenericRequestData(BaseModel):
 
 def create_a2a_extensions(adapter: A2AClientAdapter) -> dict[str, Callable[..., Any]]:
     """
-    Creates A2A template extensions bound to the provided A2AClientAdapter.
+    Creates A2A template extensions for invoking remote agent capabilities asynchronously.
     
     Returns:
-        A dictionary containing the asynchronous 'a2a_invoke' extension function.
-        The function performs an A2A remote capability call.
-        It returns a tuple (dict_result, output_var_name | None).
+        A dictionary containing the asynchronous 'a2a_invoke' extension function. This function parses a colon-separated argument string to extract required parameters ('agent_url', 'capability'), an optional JSON 'payload', and an optional 'output_variable' name. It then calls the provided A2AClientAdapter to execute the remote capability and returns a tuple of the response data and the output variable name (if specified).
+    
+    Raises:
+        ExtensionArgumentError: If required arguments are missing or the payload is invalid JSON.
+        RuntimeError: If the adapter is not available.
     """
     async def _a2a_invoke_extension_async(gpt_args_str: str) -> tuple[dict, str | None]:
         """
-        Invokes a remote capability on an A2A agent using provided arguments.
+        Invokes a remote capability on an A2A agent using parsed arguments.
         
-        Parses a colon-separated argument string to extract 'agent_url', 'capability', 
-        'payload' (JSON string), and an optional 'output_variable'.
-        Calls the adapter's `execute_remote_capability` asynchronously.
+        Parses a colon-separated string of key-value pairs to extract the agent URL, capability name, optional JSON payload, and an optional output variable name. Executes the specified capability asynchronously via the A2A adapter and returns the response data along with the output variable name if provided.
         
         Args:
-            gpt_args_str: Colon-separated key=value pairs. Required keys: 'agent_url', 'capability'.
-                          Optional: 'payload' (JSON string, defaults to "{}"), 
-                                    'output_variable' (string name).
+            gpt_args_str: Colon-separated key=value pairs specifying 'agent_url', 'capability', optional 'payload' (as a JSON string), and optional 'output_variable'.
         
         Returns:
-            A tuple: (response_data_dict, output_variable_name_or_none).
-            'response_data_dict' is the dictionary result from the A2A call.
-            'output_variable_name_or_none' is the string name if 'output_variable' was specified, else None.
+            A tuple containing the response data dictionary from the remote capability invocation and the output variable name if specified, otherwise None.
         
         Raises:
-            ExtensionArgumentError: If required arguments are missing or the payload is invalid JSON.
-            RuntimeError: If the adapter is not available.
+            ExtensionArgumentError: If required arguments are missing or the payload is not valid JSON.
+            RuntimeError: If the A2A adapter is not available.
         """
         parsed_args = {}
         # More robust parsing for key=value pairs separated by ':'

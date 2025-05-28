@@ -73,7 +73,9 @@ class TemplateService:
         context_data: dict[str, Any] | None = None, # Renamed from context to context_data for clarity
     ) -> str:
         """
-        Renders a template string by substituting variables and processing registered extensions.
+        Asynchronously renders a template by processing registered extensions and substituting variables.
+        
+        The method first applies all registered template extensions, allowing them to modify the template and variables. It then replaces simple `{{variable}}` placeholders with corresponding values from the variables dictionary. Extensions are processed before variable substitution to ensure correct evaluation order.
         
         Args:
             template: The template string containing variable placeholders and extension calls.
@@ -81,7 +83,7 @@ class TemplateService:
             context_data: Optional dictionary with additional context; currently not used for dynamic extension registration.
         
         Returns:
-            The fully rendered template string with variables and extensions processed.
+            The fully rendered template string with all extensions and variables processed.
         """
         # Note: The logic for dynamically registering extensions based on context_data
         # for memory_service was present. If a2a_client_adapter can also be passed this way,
@@ -110,14 +112,16 @@ class TemplateService:
         self, template_content: str, variables: dict[str, Any] | None = None
     ) -> str:
         """
-        Process a template with extensions and variables.
-
+        Processes a template string by evaluating registered extension functions and substituting their results.
+        
+        Extension calls within the template are identified and executed in reverse order to preserve string positions. Arguments for each extension are parsed according to the extension type. If an extension execution fails, an error message is inserted in place of the extension call.
+        
         Args:
-            template_content: Template content with extension calls
-            variables: Optional variables for template substitution
-
+            template_content: The template string containing extension calls.
+            variables: Optional dictionary of variables for template substitution, used by some extensions.
+        
         Returns:
-            Processed template content
+            The template string with all extension calls replaced by their computed results or error messages.
         """
         if variables is None:
             variables = {}
@@ -188,9 +192,24 @@ class TemplateService:
         return processed_template
 
     async def _render_variables(self, template: str, variables: dict[str, Any]) -> str:
-        """Handle basic {{variable}} substitution."""
+        """
+        Performs substitution of simple `{{variable}}` placeholders in the template using provided variables.
+        
+        Raises:
+            MissingVariableError: If a required variable is not present in the variables dictionary.
+        
+        If a variable's value is a dictionary or list, it is serialized to JSON before insertion.
+        """
 
         def replace_var(match):
+            """
+            Replaces a matched template variable with its corresponding value from the variables dictionary.
+            
+            Raises:
+                MissingVariableError: If the variable is not present in the variables dictionary.
+            
+            If the variable's value is a dict or list, it is serialized to JSON before substitution. Otherwise, the value is converted to a string, or an empty string if None.
+            """
             var_name = match.group(1).strip()
             if var_name not in variables:
                 # It's crucial that extensions run first and populate variables.

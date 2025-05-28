@@ -17,8 +17,9 @@ from app.service_layer.fabric_patterns import (
 @pytest.mark.asyncio
 async def test_fabric_collaborative_rag_pattern() -> None:
     """
-    Tests the CollaborativeRAGModule's forward method, ensuring it interacts
-    correctly with the A2AClientAdapter and processes responses as expected.
+    Asynchronously tests that CollaborativeRAGModule's forward method generates a query, invokes the remote capability via the adapter with correct parameters, and returns the expected combined output string.
+    
+    This test mocks the A2AClientAdapter and the generate_query method to simulate remote interaction and verifies that the forward method processes and formats the response as intended.
     """
     # a. Create a mock A2AClientAdapter
     mock_a2a_adapter = AsyncMock(spec=A2AClientAdapter)

@@ -18,6 +18,11 @@ class TestTemplateService:
 
     @pytest.mark.asyncio
     async def test_render_with_simple_variables(self):
+        """
+        Tests that TemplateService.render correctly substitutes simple variables in a template.
+        
+        Asserts that placeholders in the template are replaced with corresponding values from the variables dictionary.
+        """
         service = TemplateService(a2a_client_adapter=None)
         template_content = "Hello {{name}}! Today is {{day}}."
         variables = {'name': 'World', 'day': 'Monday'}
@@ -26,6 +31,11 @@ class TestTemplateService:
 
     @pytest.mark.asyncio
     async def test_render_with_extra_variables(self):
+        """
+        Tests that rendering a template with extra variables ignores unused variables.
+        
+        Verifies that the output correctly substitutes only the placeholders present in the template, and additional variables in the input dictionary do not affect the rendered result.
+        """
         service = TemplateService(a2a_client_adapter=None)
         template_content = "Hello {{name}}!"
         variables = {'name': 'World', 'day': 'Tuesday'} # 'day' is extra
@@ -34,6 +44,11 @@ class TestTemplateService:
 
     @pytest.mark.asyncio
     async def test_render_raises_for_missing_variable(self):
+        """
+        Tests that rendering a template with a missing variable raises MissingVariableError.
+        
+        Asserts that the exception message includes the name of the missing variable.
+        """
         service = TemplateService(a2a_client_adapter=None)
         template_content = "Hello {{name}}! You are {{age}} years old."
         variables = {'name': 'World'} # 'age' is missing
@@ -47,6 +62,9 @@ class TestTemplateService:
 
     @pytest.mark.asyncio
     async def test_render_with_empty_template(self):
+        """
+        Tests that rendering an empty template with no variables returns an empty string.
+        """
         service = TemplateService(a2a_client_adapter=None)
         template_content = ""
         variables: Dict[str, Any] = {}
@@ -55,6 +73,9 @@ class TestTemplateService:
 
     @pytest.mark.asyncio
     async def test_render_with_no_variables_in_template(self):
+        """
+        Tests that rendering a template with no placeholders returns the original template unchanged, even when extra variables are provided.
+        """
         service = TemplateService(a2a_client_adapter=None)
         template_content = "Hello World, no variables here."
         variables = {'name': 'Test'}
@@ -63,6 +84,11 @@ class TestTemplateService:
 
     @pytest.mark.asyncio
     async def test_render_with_variables_having_leading_trailing_spaces_in_template(self):
+        """
+        Tests that template rendering correctly handles placeholders with leading or trailing spaces.
+        
+        Verifies that variables are substituted into template placeholders even when the placeholders contain extra spaces inside the curly braces.
+        """
         service = TemplateService(a2a_client_adapter=None)
         template_content = "Hello {{ name }}! Today is {{day }}. Weather is {{ condition }}."
         variables = {'name': 'Spacey', 'day': 'Wednesday', 'condition': 'Sunny'}
@@ -71,6 +97,12 @@ class TestTemplateService:
         
     @pytest.mark.asyncio
     async def test_render_with_non_string_values(self):
+        """
+        Tests that TemplateService.render correctly substitutes variables with non-string values.
+        
+        Verifies that integer and boolean variables are converted to their string representations
+        when rendering the template.
+        """
         service = TemplateService(a2a_client_adapter=None)
         template_content = "Name: {{name}}, Age: {{age}}, Active: {{is_active}}"
         variables = {'name': 'Tester', 'age': 30, 'is_active': True}
@@ -79,6 +111,11 @@ class TestTemplateService:
 
     @pytest.mark.asyncio
     async def test_render_delegated_research_pattern(self) -> None:
+        """
+        Tests delegated research workflow rendering with asynchronous agent invocations.
+        
+        This test verifies that `TemplateService.render` correctly processes a template containing delegated agent calls using the `a2a:invoke` extension. It mocks asynchronous remote capability invocations for web search and data analysis, checks that the adapter is called with the correct parameters and payloads, and asserts that the final rendered template integrates the results as expected.
+        """
         mock_a2a_adapter = AsyncMock(spec=A2AClientAdapter)
 
         web_search_payload = {"results": ["link1", "link2", "text snippet about topic"]}
