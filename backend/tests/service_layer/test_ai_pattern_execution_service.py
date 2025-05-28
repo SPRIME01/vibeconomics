@@ -58,10 +58,10 @@ def mock_a2a_client_adapter() -> mock.Mock:
 @pytest.fixture
 def mock_uow() -> mock.Mock:
     """
-    Creates a mock instance of AbstractUnitOfWork with async context manager and conversation repository methods.
+    Creates a mock AbstractUnitOfWork with async context manager and conversation repository methods.
     
     Returns:
-        A mock object simulating an AbstractUnitOfWork, including async methods for context management, conversation operations, and commit.
+        A mock object simulating an AbstractUnitOfWork, including async context management, conversation repository operations, and commit.
     """
     uow_mock = mock.Mock(spec=AbstractUnitOfWork)
     uow_mock.__aenter__ = mock.AsyncMock(return_value=uow_mock)
@@ -790,7 +790,7 @@ async def test_execute_pattern_with_a2a_client_adapter_available(
 ) -> None:
     # Arrange
     """
-    Tests that the AIPatternExecutionService passes the A2A client adapter to the template rendering context and returns the expected AI response when available.
+    Tests that the AIPatternExecutionService includes the A2A client adapter in the template rendering context and returns the expected AI response when the adapter is available.
     """
     mock_pattern_service.get_pattern_content = mock.AsyncMock(
         return_value="Pattern with A2A integration"
@@ -840,9 +840,9 @@ async def test_execute_dspy_module_with_a2a_adapter(
     mock_a2a_client_adapter: AsyncMock,
 ) -> None:
     """
-    Tests that `execute_dspy_module` correctly instantiates a DSPy module requiring an `a2a_adapter`, calls its async `forward` method with the provided input, and returns the expected output.
+    Tests execution of a DSPy module requiring an A2A adapter via the service.
     
-    Mocks the DSPy module class and its `forward` method, patches the DSPy language model, and verifies that the adapter is passed to the module constructor, the input is forwarded, and the result matches the mocked output.
+    Verifies that `execute_dspy_module` instantiates the module with the provided `a2a_adapter`, calls its asynchronous `forward` method with the input, and returns the expected output. Mocks the module class, its `forward` method, and the DSPy language model to isolate service behavior.
     """
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
@@ -915,10 +915,10 @@ async def test_execute_dspy_module_with_a2a_adapter(
 class SimpleDSPyModule(dspy.Module):
     def __init__(self, an_arg: str = "default"): # Does not take a2a_adapter
         """
-        Initializes the SimpleDSPyModule with an optional argument and a mocked predictor.
+        Initializes a SimpleDSPyModule with an optional argument and a mocked predictor.
         
         Args:
-            an_arg: Optional argument for the module, defaults to "default".
+            an_arg: An optional string argument for the module, defaulting to "default".
         """
         super().__init__()
         self.an_arg = an_arg
@@ -939,7 +939,7 @@ class SimpleDSPyModule(dspy.Module):
         Processes the input text using the module's predictor and returns the prediction result.
         
         Args:
-            text_input: The input string to be processed by the predictor.
+            text_input: Input string to be processed.
         
         Returns:
             The result produced by the predictor for the given input.
@@ -959,13 +959,9 @@ async def test_execute_dspy_module_without_a2a_adapter_if_not_needed(
     mock_a2a_client_adapter_instance: AsyncMock, # Service can have it
 ) -> None:
     """
-    Tests that `execute_dspy_module` correctly instantiates and executes a DSPy module
-    that does not require an `a2a_adapter`, ensuring only relevant constructor arguments
-    are passed and the module's `forward` method is called with the input.
+    Tests execution of a DSPy module that does not require an `a2a_adapter` using `execute_dspy_module`.
     
-    Asserts that the module is instantiated without the `a2a_adapter` argument, the
-    `forward` method is invoked with the provided input, and the returned result matches
-    the mocked output.
+    Verifies that the module is instantiated without the `a2a_adapter` argument, its `forward` method is called with the provided input, and the returned result matches the expected mocked output.
     """
     service = AIPatternExecutionService(
         pattern_service=mock_pattern_service,
