@@ -1,6 +1,12 @@
+import inspect
 from unittest import mock
+
+# Imports for new tests (moved up for PEP-8 compliance)
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import dspy
+import httpx  # Ensure httpx is imported
 import pytest
 from pydantic import BaseModel, ValidationError
 
@@ -13,6 +19,7 @@ from app.service_layer.ai_pattern_execution_service import (
 )
 from app.service_layer.ai_provider_service import AIProviderService
 from app.service_layer.context_service import ContextService
+from app.service_layer.fabric_patterns import CollaborativeRAGModule
 from app.service_layer.memory_service import AbstractMemoryService
 from app.service_layer.pattern_service import PatternService
 from app.service_layer.strategy_service import StrategyService
@@ -51,8 +58,8 @@ def mock_memory_service() -> mock.Mock:
 
 
 @pytest.fixture
-def mock_a2a_client_adapter() -> mock.Mock:
-    return mock.Mock(spec=A2AClientAdapter)
+def mock_a2a_client_adapter():
+    return AsyncMock()
 
 
 @pytest.fixture
@@ -66,6 +73,9 @@ def mock_uow() -> mock.Mock:
     uow_mock.conversations.save = mock.AsyncMock()
     uow_mock.commit = mock.AsyncMock()
     return uow_mock
+
+
+# Imports for new tests
 
 
 def test_aipatternexecutionservice_creation(
@@ -810,3 +820,286 @@ async def test_execute_pattern_with_a2a_client_adapter_available(
     assert "context_data" in call_kwargs
     assert "a2a_client_adapter" in call_kwargs["context_data"]
     assert call_kwargs["context_data"]["a2a_client_adapter"] == mock_a2a_client_adapter
+
+
+@pytest.mark.asyncio
+async def test_execute_dspy_module_with_a2a_adapter(
+    mock_pattern_service: MagicMock,
+    mock_template_service: MagicMock,
+    mock_strategy_service: MagicMock,
+    mock_context_service: MagicMock,
+    mock_ai_provider_service: MagicMock,
+    mock_uow: MagicMock,
+    mock_memory_service: MagicMock,
+    mock_a2a_client_adapter: AsyncMock,
+) -> None:
+    service = AIPatternExecutionService(
+        pattern_service=mock_pattern_service,
+        template_service=mock_template_service,
+        strategy_service=mock_strategy_service,
+        context_service=mock_context_service,
+        ai_provider_service=mock_ai_provider_service,
+        uow=mock_uow,
+        memory_service=mock_memory_service,
+        a2a_client_adapter=mock_a2a_client_adapter,
+    )
+
+    # Create mock without spec to avoid signature validation issues
+    MockDSPyModuleClass = MagicMock()
+    mock_module_instance = MagicMock()
+    mock_module_instance.forward = AsyncMock(return_value="mocked_dspy_output")
+    MockDSPyModuleClass.return_value = mock_module_instance
+    MockDSPyModuleClass.__name__ = "MockCollaborativeRAGModule"
+
+    module_input_arg = "Test question for module"
+
+    # Mock the __init__ signature to include a2a_adapter parameter
+    mock_init_sig = MagicMock(spec=inspect.Signature)
+    mock_a2a_param = MagicMock(spec=inspect.Parameter)
+    mock_a2a_param.name = "a2a_adapter"
+    mock_init_sig.parameters = {"a2a_adapter": mock_a2a_param}
+
+    # Mock the forward signature to expect one argument (input_question) besides self
+    mock_forward_sig = MagicMock(spec=inspect.Signature)
+    mock_forward_param_self = MagicMock(spec=inspect.Parameter)
+    mock_forward_param_self.name = "self"
+    mock_forward_param_self.kind = inspect.Parameter.POSITIONAL_OR_KEYWORD
+    mock_forward_param_input = MagicMock(spec=inspect.Parameter)
+    mock_forward_param_input.name = "input_question"
+    mock_forward_param_input.kind = inspect.Parameter.POSITIONAL_OR_KEYWORD
+    mock_forward_sig.parameters = {
+        "self": mock_forward_param_self,
+        "input_question": mock_forward_param_input,
+    }
+
+    mock_dspy_lm = MagicMock()
+    mock_settings = MagicMock()
+    mock_settings.lm = mock_dspy_lm
+
+    def signature_side_effect(obj):
+        if obj == MockDSPyModuleClass.__init__:
+            return mock_init_sig
+        elif obj == MockDSPyModuleClass.forward or obj == mock_module_instance.forward:
+            return mock_forward_sig
+        else:
+            raise ValueError(f"Unexpected object passed to inspect.signature: {obj}")
+
+    with (
+        patch.object(dspy, "settings", mock_settings),
+        patch("inspect.signature", side_effect=signature_side_effect),
+    ):
+        result = await service.execute_dspy_module(
+            module_class=MockDSPyModuleClass, module_input=module_input_arg
+        )
+
+    MockDSPyModuleClass.assert_called_once_with(a2a_adapter=mock_a2a_client_adapter)
+    mock_module_instance.forward.assert_called_once_with(module_input_arg)
+    assert result == "mocked_dspy_output"
+
+
+# Define a simple DSPy module for the next test
+class SimpleDSPyModule(dspy.Module):
+    def __init__(self, an_arg: str = "default"):  # Does not take a2a_adapter
+        super().__init__()
+        self.an_arg = an_arg
+        # Mock the predictor part if it involves an LM call for this simple module
+        # For this test, we assume forward is simple or its LM interactions are not the focus.
+        self.predictor = MagicMock()
+        # Let's make predictor return a dspy.Prediction object
+        self.predictor.return_value = dspy.Prediction(result="simple_output")
+
+    async def forward(self, text_input: str) -> str:
+        # Simulate some processing or a call to a sub-module/predictor
+        # In a real module, this might be:
+        # prediction = self.predictor(text_input=text_input)
+        # return prediction.result
+        # For the test, we can make it simpler if self.predictor is pre-configured:
+        return self.predictor(text_input=text_input).result
+
+
+@pytest.mark.asyncio
+async def test_execute_dspy_module_without_a2a_adapter_if_not_needed(
+    mock_pattern_service: MagicMock,
+    mock_template_service: MagicMock,
+    mock_strategy_service: MagicMock,
+    mock_context_service: MagicMock,
+    mock_ai_provider_service: MagicMock,
+    mock_uow: MagicMock,
+    mock_memory_service: MagicMock,
+    mock_a2a_client_adapter: AsyncMock,
+) -> None:
+    mock_a2a_client_adapter.execute_remote_capability = AsyncMock()
+
+    service = AIPatternExecutionService(
+        pattern_service=mock_pattern_service,
+        template_service=mock_template_service,
+        strategy_service=mock_strategy_service,
+        context_service=mock_context_service,
+        ai_provider_service=mock_ai_provider_service,
+        uow=mock_uow,
+        memory_service=mock_memory_service,
+        a2a_client_adapter=mock_a2a_client_adapter,
+    )
+
+    module_input_val = "hello"
+    constructor_kwarg_val = "custom_arg_value"
+
+    mock_dspy_lm = MagicMock()
+    mock_settings = MagicMock()
+    mock_settings.lm = mock_dspy_lm
+    with patch.object(dspy, "settings", mock_settings):
+        # Create a simple mock module class that doesn't need a2a_adapter
+        MockSimpleDSPyModule = MagicMock(name="MockSimpleDSPyModule")
+        mock_simple_instance = MagicMock(name="mock_simple_instance")
+        mock_simple_instance.forward = AsyncMock(
+            return_value="simple_output_from_mocked_forward"
+        )
+        MockSimpleDSPyModule.return_value = mock_simple_instance
+
+        # Mock the module's __init__ signature
+        mock_init_sig = MagicMock(spec=inspect.Signature)
+        mock_init_param_an_arg = MagicMock(spec=inspect.Parameter)
+        mock_init_param_an_arg.name = "an_arg"
+        mock_init_sig.parameters = {"an_arg": mock_init_param_an_arg}
+
+        # Mock the module's forward signature
+        mock_forward_sig = MagicMock(spec=inspect.Signature)
+        mock_forward_param_self = MagicMock(spec=inspect.Parameter)
+        mock_forward_param_self.name = "self"
+        mock_forward_param_self.kind = inspect.Parameter.POSITIONAL_OR_KEYWORD
+        mock_forward_param_text_input = MagicMock(spec=inspect.Parameter)
+        mock_forward_param_text_input.name = "text_input"
+        mock_forward_param_text_input.kind = inspect.Parameter.POSITIONAL_OR_KEYWORD
+        mock_forward_sig.parameters = {
+            "self": mock_forward_param_self,
+            "text_input": mock_forward_param_text_input,
+        }
+
+        with patch("inspect.signature") as mock_inspect_signature:
+
+            def signature_side_effect(obj):
+                if obj == MockSimpleDSPyModule.__init__:
+                    return mock_init_sig
+                if (
+                    hasattr(MockSimpleDSPyModule, "forward")
+                    and obj == MockSimpleDSPyModule.forward
+                ):
+                    return mock_forward_sig
+                if (
+                    hasattr(mock_simple_instance, "forward")
+                    and obj == mock_simple_instance.forward
+                ):
+                    return mock_forward_sig
+                raise ValueError(
+                    f"Unexpected object passed to inspect.signature: {obj}"
+                )
+
+            mock_inspect_signature.side_effect = signature_side_effect
+
+            result = await service.execute_dspy_module(
+                module_class=MockSimpleDSPyModule,
+                module_input=module_input_val,
+                an_arg=constructor_kwarg_val,
+            )
+
+        MockSimpleDSPyModule.assert_called_once_with(an_arg=constructor_kwarg_val)
+        mock_simple_instance.forward.assert_called_once_with(module_input_val)
+        assert result == "simple_output_from_mocked_forward"
+
+
+@pytest.mark.asyncio
+async def test_execute_dspy_module_raises_if_adapter_needed_but_missing(
+    mock_pattern_service: MagicMock,
+    mock_template_service: MagicMock,
+    mock_strategy_service: MagicMock,
+    mock_context_service: MagicMock,
+    mock_ai_provider_service: MagicMock,
+    mock_uow: MagicMock,
+    mock_memory_service: MagicMock,
+) -> None:
+    service = AIPatternExecutionService(
+        pattern_service=mock_pattern_service,
+        template_service=mock_template_service,
+        strategy_service=mock_strategy_service,
+        context_service=mock_context_service,
+        ai_provider_service=mock_ai_provider_service,
+        uow=mock_uow,
+        memory_service=mock_memory_service,
+        a2a_client_adapter=None,
+    )
+
+    module_input_val = "Test question for error case"
+
+    mock_dspy_lm = MagicMock()
+    mock_settings = MagicMock()
+    mock_settings.lm = mock_dspy_lm
+    with patch.object(dspy, "settings", mock_settings):
+        with pytest.raises(
+            AttributeError,
+            match=f"{CollaborativeRAGModule.__name__} requires an 'a2a_adapter'",
+        ):
+            await service.execute_dspy_module(
+                module_class=CollaborativeRAGModule,
+                module_input=module_input_val,
+            )
+
+
+@pytest.mark.asyncio
+async def test_execute_pattern_propagates_a2a_extension_error(
+    mock_pattern_service: MagicMock,
+    mock_strategy_service: MagicMock,
+    mock_context_service: MagicMock,
+    mock_ai_provider_service: MagicMock,
+    mock_uow: MagicMock,
+    mock_memory_service: MagicMock,
+) -> None:
+    error_raising_a2a_adapter = AsyncMock(spec=A2AClientAdapter)
+    mock_request = MagicMock(spec=httpx.Request)
+    mock_request.method = "POST"
+    mock_request.url = "http://test.agent/a2a"
+    error_to_raise = httpx.RequestError("Simulated network error", request=mock_request)
+    error_raising_a2a_adapter.execute_remote_capability.side_effect = error_to_raise
+
+    real_template_service = TemplateService(
+        memory_service=None,
+        activepieces_adapter=None,
+        a2a_client_adapter=error_raising_a2a_adapter,
+    )
+
+    service = AIPatternExecutionService(
+        pattern_service=mock_pattern_service,
+        template_service=real_template_service,
+        strategy_service=mock_strategy_service,
+        context_service=mock_context_service,
+        ai_provider_service=mock_ai_provider_service,
+        uow=mock_uow,
+        memory_service=mock_memory_service,
+        a2a_client_adapter=None,
+    )
+
+    pattern_name_for_test = "test_a2a_fail_pattern"
+    # Use valid JSON for payload
+    pattern_content_with_a2a = 'Calling A2A: {{a2a:invoke:agent_url=http://test.agent/a2a:capability=test_cap:payload={"key":"value"}}}'
+
+    mock_pattern_service.get_pattern_content = mock.AsyncMock(
+        return_value=pattern_content_with_a2a
+    )
+
+    mock_strategy_service.get_strategy = mock.AsyncMock(return_value=None)
+    mock_context_service.get_context_content = mock.AsyncMock(return_value=None)
+    mock_uow.conversations.get_by_id = mock.AsyncMock(return_value=None)
+
+    with pytest.raises(httpx.RequestError, match="Simulated network error"):
+        await service.execute_pattern(
+            pattern_name=pattern_name_for_test,
+            input_variables={"input": "test"},
+        )
+
+    error_raising_a2a_adapter.execute_remote_capability.assert_called_once()
+    args, kwargs = error_raising_a2a_adapter.execute_remote_capability.call_args
+    assert kwargs["agent_url"] == "http://test.agent/a2a"
+    assert kwargs["capability_name"] == "test_cap"
+    from app.service_layer.template_extensions import GenericRequestData
+
+    assert isinstance(kwargs["request_payload"], GenericRequestData)
+    assert kwargs["request_payload"].model_dump() == {"key": "value"}

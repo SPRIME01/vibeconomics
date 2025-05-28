@@ -89,18 +89,23 @@ class TemplateService:
         # If context_data contains 'a2a_client_adapter' and self.a2a_client_adapter was None,
         # one could initialize and register a2a_extensions here.
 
-        # First, substitute simple variables
-        variable_substituted_template = await self._render_variables(
-            template, variables
+        # First, process template extensions. Extensions can modify the `variables` dict.
+        template_after_extensions = await self.extension_registry.process_template_extensions(
+            template,
+            variables,
         )
 
-        # Then, process template extensions on the result
-        final_template = await self.extension_registry.process_template_extensions(
-            variable_substituted_template,
-            variables,  # Pass variables, though not used by current ext processor
+        # Then, substitute simple {{variable}} placeholders on the result
+        final_template = await self._render_variables(
+            template_after_extensions, variables
         )
         return final_template
 
+    # The synchronous process_template method seems to be an alternative rendering path
+    # or an older version. It duplicates some logic from process_template_extensions
+    # and doesn't seem to align with the async nature of render and A2A extensions.
+    # For the purpose of this task, we are focusing on the async `render` method.
+    # This synchronous method might need review or removal if it's redundant or conflicts.
     def process_template(
         self, template_content: str, variables: dict[str, Any] | None = None
     ) -> str:
@@ -188,10 +193,21 @@ class TemplateService:
         def replace_var(match):
             var_name = match.group(1).strip()
             if var_name not in variables:
+                # It's crucial that extensions run first and populate variables.
+                # If a variable is still not found here, it's genuinely missing.
                 raise MissingVariableError(f"Missing variable: {var_name}")
             value = variables[var_name]
+            
+            # If the value is a dict or list (e.g. from an output_variable),
+            # and it's being rendered directly into the template,
+            # it should be JSON dumped to be valid.
+            if isinstance(value, (dict, list)):
+                import json # Ensure json is imported
+                return json.dumps(value)
             return str(value) if value is not None else ""
 
-        # Replace {{variable}} patterns that are not extensions (no colons)
-        result = re.sub(r"\{\{([^}:]+)\}\}", replace_var, template)
+        # Replace {{variable}} patterns that are not extensions (no colons and not extension tags)
+        # This regex is simplified; it assumes that any {{...}} without colons is a variable.
+        # More complex logic might be needed if {{...}} can appear in other contexts that aren't variables or extensions.
+        result = re.sub(r"\{\{\s*([^}:}\s]+)\s*\}\}", replace_var, template) # Adjusted regex to be more specific for simple vars
         return result
