@@ -1,6 +1,6 @@
+import { ComponentMeta, ComponentStory } from '@storybook/react'; // <-- Add this import
 import { rest } from 'msw';
 import React from 'react';
-import { ComponentMeta, ComponentStory } from '@storybook/react'; // <-- Add this import
 import CopilotActions, { CopilotActionsProps } from './CopilotActions';
 import CopilotSidebar, { CopilotSidebarProps } from './CopilotSidebar';
 
