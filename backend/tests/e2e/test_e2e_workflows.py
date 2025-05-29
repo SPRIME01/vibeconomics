@@ -17,8 +17,9 @@ from pydantic import BaseModel
 @pytest.mark.asyncio
 async def test_e2e_delegated_research_workflow_with_mocked_a2a() -> None:
     """
-    Tests the E2E 'delegated_research_and_summarize' workflow, mocking the external A2A communication
-    by overriding the A2AClientAdapter dependency.
+    Performs an end-to-end test of the 'delegated_research_and_summarize' workflow by simulating external agent interactions through mocked A2A communication.
+    
+    This test overrides the A2AClientAdapter dependency to return predefined responses for web search and key point extraction capabilities. It verifies that the workflow correctly issues remote capability calls with expected payloads, processes the responses, and produces a reply containing the anticipated summary content.
     """
     
     mocked_web_search_response: Dict[str, Any] = {
@@ -38,6 +39,21 @@ async def test_e2e_delegated_research_workflow_with_mocked_a2a() -> None:
         request_payload: BaseModel, # The dynamically created Pydantic model
         response_model: Any | None = None,
     ) -> Dict[str, Any]:
+        """
+        Simulates remote capability execution for testing delegated research workflows.
+        
+        Returns predefined mock responses based on the agent URL and capability name, asserting
+        that the request payload matches expected structure and content. Fails the test if an
+        unexpected agent or capability is invoked.
+        
+        Args:
+            agent_url: The URL of the target agent.
+            capability_name: The name of the capability to execute.
+            request_payload: The dynamically constructed Pydantic request model.
+        
+        Returns:
+            A dictionary representing the mocked response for the requested capability.
+        """
         if "websearch.agent" in agent_url and capability_name == "perform_search":
             # request_payload here will be a Pydantic model with a 'query' field
             assert hasattr(request_payload, "query")

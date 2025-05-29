@@ -34,8 +34,9 @@ T = TypeVar('T')
 @pytest.fixture(scope="function")
 def app_instance() -> Generator[FastAPI, None, None]:
     """
-    Provides a clean instance of the FastAPI application for each test function.
-    Ensures dependency overrides are cleared before and after each test.
+    Yields a clean FastAPI application instance for each test function.
+    
+    Clears all dependency overrides before and after each test to ensure isolation between tests.
     """
     actual_app.dependency_overrides.clear()
     yield actual_app
@@ -44,8 +45,9 @@ def app_instance() -> Generator[FastAPI, None, None]:
 @pytest.fixture(scope="function")
 def client(app_instance: FastAPI) -> Generator[TestClient, None, None]:
     """
-    Provides a TestClient instance for making requests to the app.
-    Uses the app_instance fixture to ensure a clean app state.
+    Yields a TestClient for making HTTP requests to the FastAPI app.
+    
+    Ensures each test receives a fresh TestClient instance tied to a clean app state.
     """
     with TestClient(app_instance) as c:
         yield c
@@ -57,7 +59,17 @@ def _create_mock_fixture(
     dependency_provider: Callable[..., Any], 
     service_class: Type[T]
 ) -> MagicMock:
-    """Helper to create and inject a MagicMock for a given service."""
+    """
+    Creates and injects a MagicMock for the specified service class into the FastAPI app's dependency overrides.
+    
+    Args:
+        app_instance: The FastAPI application instance to modify.
+        dependency_provider: The dependency provider function to override.
+        service_class: The class to use as a specification for the MagicMock.
+    
+    Returns:
+        A MagicMock instance configured for the given service class.
+    """
     mock_service = MagicMock(spec=service_class)
     # Common async methods can be pre-mocked here if desired, or configured in tests
     # For instance, if many services have an 'execute' method:
@@ -68,7 +80,11 @@ def _create_mock_fixture(
 
 @pytest.fixture
 def mock_ai_provider_service(app_instance: FastAPI) -> MagicMock:
-    """Provides a MagicMock for AIProviderService, injected via DI."""
+    """
+    Provides a MagicMock instance of AIProviderService for testing.
+    
+    The mock is injected into the FastAPI app's dependency overrides and includes async mocks for `get_completion` and `generate_text_v2` methods with default return values.
+    """
     mock_service = _create_mock_fixture(app_instance, get_ai_provider_service, AIProviderService)
     mock_service.get_completion = AsyncMock(return_value="Default mocked AI response.")
     mock_service.generate_text_v2 = AsyncMock(return_value={"text": "Default mocked AI text v2"})
@@ -77,7 +93,11 @@ def mock_ai_provider_service(app_instance: FastAPI) -> MagicMock:
 
 @pytest.fixture
 def mock_memory_service(app_instance: FastAPI) -> MagicMock:
-    """Provides a MagicMock for AbstractMemoryService, injected via DI."""
+    """
+    Provides a MagicMock instance for AbstractMemoryService and injects it into the FastAPI app's dependency overrides.
+    
+    The mock includes async methods for memory operations, returning default values suitable for isolated testing.
+    """
     mock_service = _create_mock_fixture(app_instance, get_memory_service, AbstractMemoryService)
     # Configure common AbstractMemoryService methods
     mock_service.get_memory = AsyncMock(return_value=None)
@@ -90,7 +110,12 @@ def mock_memory_service(app_instance: FastAPI) -> MagicMock:
 
 @pytest.fixture
 def mock_uow(app_instance: FastAPI) -> MagicMock:
-    """Provides a MagicMock for AbstractUnitOfWork, injected via DI."""
+    """
+    Provides a MagicMock instance of AbstractUnitOfWork for dependency injection in tests.
+    
+    The mock includes async commit and rollback methods, a mock conversations repository,
+    and supports usage as an async context manager.
+    """
     mock = _create_mock_fixture(app_instance, get_unit_of_work, AbstractUnitOfWork)
     mock.commit = AsyncMock()
     mock.rollback = AsyncMock()
@@ -105,7 +130,11 @@ def mock_uow(app_instance: FastAPI) -> MagicMock:
 
 @pytest.fixture
 def mock_message_bus(app_instance: FastAPI) -> MagicMock:
-    """Provides a MagicMock for AbstractMessageBus, injected via DI."""
+    """
+    Provides a MagicMock instance for AbstractMessageBus and injects it into the FastAPI app's dependency overrides.
+    
+    The mock's async `publish` method is set up for use in tests.
+    """
     mock = _create_mock_fixture(app_instance, get_message_bus, AbstractMessageBus)
     mock.publish = AsyncMock()
     # mock.handle = AsyncMock() # If your bus also handles messages directly
@@ -118,11 +147,9 @@ A2A_MOCKED_RESPONSES_REGISTRY: Dict[Tuple[str, str], Any] = {}
 @pytest.fixture(scope="function")
 def mock_external_a2a_responses() -> Generator[Dict[Tuple[str, str], Any], None, None]:
     """
-    Fixture to allow tests to register expected responses or exceptions for A2A calls.
-    The registry is cleared for each test.
-    Usage in a test:
-        mock_external_a2a_responses[("http://some.agent/a2a", "cap_name")] = {"data": "mocked_value"}
-        mock_external_a2a_responses[("http://other.agent/a2a", "cap_fail")] = httpx.ReadTimeout("timeout")
+    Provides a per-test registry for mocking responses or exceptions to A2A client adapter calls.
+    
+    Clears the registry before and after each test to ensure isolation. Tests can populate the registry with expected responses or exceptions keyed by (agent_url, capability_name) tuples.
     """
     A2A_MOCKED_RESPONSES_REGISTRY.clear()
     yield A2A_MOCKED_RESPONSES_REGISTRY
@@ -134,8 +161,12 @@ def mock_a2a_client_adapter(
     mock_external_a2a_responses: Dict[Tuple[str, str], Any]
 ) -> MagicMock:
     """
-    Provides a MagicMock for A2AClientAdapter, injected via DI.
-    Its execute_remote_capability method uses responses from mock_external_a2a_responses fixture.
+    Provides a MagicMock for A2AClientAdapter, injecting it into FastAPI's dependency overrides.
+    
+    The mock's execute_remote_capability method returns predefined responses or raises exceptions based on the mock_external_a2a_responses registry, keyed by (agent_url, capability_name). If a response_model is specified and the mocked response is a dict, it attempts to parse the response into the model, failing the test if parsing fails. If an unmocked call occurs, the test fails with an error message.
+    
+    Returns:
+        The MagicMock instance for A2AClientAdapter.
     """
     # Create a mock instance of A2AClientAdapter.
     # The http_client it normally takes won't be used by the mocked method.
@@ -147,6 +178,11 @@ def mock_a2a_client_adapter(
         request_payload: BaseModel, 
         response_model: Type[BaseModel] | None = None, # Corrected type hint
     ) -> Any: # Returns Pydantic model instance or dict
+        """
+        Simulates the execution of a remote capability call for testing, returning a mocked response or raising a mocked exception.
+        
+        If a mock response or exception is registered for the given (agent_url, capability_name) key, returns the response or raises the exception. If a response_model is provided and the mock is a dict, attempts to parse it into the model, failing the test if parsing fails. Fails the test if the call is not mocked.
+        """
         key = (agent_url, capability_name)
         if key in mock_external_a2a_responses:
             response_or_exception = mock_external_a2a_responses[key]
@@ -181,9 +217,9 @@ def mock_a2a_client_adapter(
 @pytest.fixture
 def mock_active_pieces_adapter() -> Generator[MagicMock, None, None]:
     """
-    Provides a MagicMock for ActivePiecesAdapter by patching the class.
-    This is useful if ActivePiecesAdapter is instantiated directly rather than via DI provider.
-    If it has a DI provider, prefer the _create_mock_fixture pattern.
+    Yields a MagicMock instance of ActivePiecesAdapter with async methods mocked for testing.
+    
+    This fixture patches the ActivePiecesAdapter class so that any instantiation within the test context returns a MagicMock. The run_flow method is mocked to return a fixed success response. Use this fixture when ActivePiecesAdapter is instantiated directly rather than injected via dependency overrides.
     """
     # Assuming ActivePiecesAdapter is imported as:
     # from src.app.adapters.activepieces_adapter import ActivePiecesAdapter
@@ -211,8 +247,9 @@ def apply_core_service_mocks(
     # Tests needing A2A mocking should request mock_a2a_client_adapter (and mock_external_a2a_responses) explicitly.
 ) -> None:
     """
-    Applies a common set of core service mocks using FastAPI's dependency_overrides.
-    This is a convenience fixture. Individual mock fixtures are still available.
+    Convenience fixture to request multiple core service mocks in tests.
+    
+    This fixture ensures that the core service mocks for AI provider, memory, unit of work, and message bus are available and their dependency overrides are applied to the FastAPI app instance. It does not perform additional actions, as each individual mock fixture manages its own override.
     """
     # Overrides are already applied within each individual mock fixture that uses app_instance.
     # This fixture primarily serves as a way to request multiple mocks easily.

@@ -36,12 +36,9 @@ TEST_CAPABILITY_NAME = "test_processor" # The A2A capability we expect to find a
 @pytest.mark.asyncio
 async def test_nlweb_mcp_interaction_with_a2a_capability():
     """
-    Tests the NLWeb/MCP interaction:
-    1. Attempts to fetch an MCP manifest.
-    2. Parses the manifest to find the 'test_processor' A2A capability.
-    3. Mocks the underlying A2AHandlerService for this capability.
-    4. Invokes the capability using the details (operationUrl) from the manifest.
-    5. Verifies the response and mock interactions.
+    Performs an end-to-end test of the NLWeb MCP manifest endpoint and A2A capability integration.
+    
+    This test registers a mock A2A capability, overrides FastAPI dependencies to use mocked services, fetches the MCP manifest, discovers the test capability, and invokes its endpoint with a test payload. It verifies the manifest structure, capability discovery, endpoint invocation, response correctness, and that the handler service was called with expected arguments. Dependency overrides are cleared after the test.
     """
     
     # 1. Setup Mocks & Dependency Overrides for the 'test_processor' A2A capability
@@ -69,6 +66,18 @@ async def test_nlweb_mcp_interaction_with_a2a_capability():
 
     async def mock_handle_a2a_request_for_mcp(capability_name: str, data: BaseModel) -> Dict[str, Any]:
         # This mock will be hit when the A2A endpoint for 'test_processor' is called
+        """
+        Mocks the handling of an A2A request for the MCP test capability.
+        
+        Asserts that the provided capability name and input data match the expected test values, then returns a predefined output dictionary.
+        
+        Args:
+            capability_name: The name of the capability being invoked.
+            data: The input data for the capability, expected to be an instance of TestA2AInput.
+        
+        Returns:
+            A dictionary representing the expected output of the handler.
+        """
         assert capability_name == TEST_CAPABILITY_NAME
         assert isinstance(data, TestA2AInput)
         assert data.text_to_process == input_text_for_mcp_test

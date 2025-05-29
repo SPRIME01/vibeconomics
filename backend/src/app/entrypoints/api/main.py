@@ -29,16 +29,26 @@ class TestDIEvent(DomainEvent):
 
 @api_router.get("/", tags=["default"])
 async def read_root() -> dict[str, str]:
-    """Root endpoint for the application."""
+    """
+    Returns a welcome message for the root endpoint of the application.
+    
+    Returns:
+        A dictionary containing a welcome message.
+    """
     return {"message": "Welcome to Vibeconomics Agentic Framework"}
 
 
 @api_router.post("/test-di-uow", tags=["default"])
 async def test_di_uow(uow: UoWDep) -> dict[str, bool]:
     """
-    Endpoint to test Unit of Work dependency injection.
-
-    Verifies that the injected 'uow' is an instance of AbstractUnitOfWork.
+    Tests the injection of a Unit of Work dependency.
+    
+    Checks if the provided unit of work is an instance of AbstractUnitOfWork and reports whether it has been committed.
+    
+    Returns:
+        A dictionary with keys:
+            - "is_uow_instance": True if the injected object is an AbstractUnitOfWork.
+            - "committed": True if the unit of work has a 'committed' attribute set to True; otherwise, False.
     """
     is_uow_instance = isinstance(uow, AbstractUnitOfWork)
     return {
@@ -50,9 +60,10 @@ async def test_di_uow(uow: UoWDep) -> dict[str, bool]:
 @api_router.post("/test-di-message-bus", tags=["default"])
 async def test_di_message_bus(bus: MessageBusDep) -> dict[str, bool]:
     """
-    Endpoint to test MessageBus dependency injection.
-
-    Verifies that the injected 'bus' is an instance of AbstractMessageBus.
+    Tests whether the injected message bus is an instance of AbstractMessageBus.
+    
+    Returns:
+        A dictionary with a boolean indicating if the injected bus is an AbstractMessageBus.
     """
     is_bus_instance = isinstance(bus, AbstractMessageBus)
     return {"is_bus_instance": is_bus_instance}
@@ -64,9 +75,10 @@ async def test_di_concrete_uow(
     uow: AbstractUnitOfWork = Depends(get_uow),
 ) -> dict[str, bool]:
     """
-    Endpoint to test direct injection of UoW using the getter.
-
-    Verifies that the injected 'uow' is an instance of AbstractUnitOfWork.
+    Tests direct injection of a unit of work using the concrete dependency getter.
+    
+    Returns:
+        A dictionary indicating whether the injected unit of work is an instance of AbstractUnitOfWork.
     """
     return {"is_uow_instance": isinstance(uow, AbstractUnitOfWork)}
 

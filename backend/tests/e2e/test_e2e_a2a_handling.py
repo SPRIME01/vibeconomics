@@ -37,11 +37,9 @@ A2A_ENDPOINT = f"/api/v1/a2a/execute/{TARGET_CAPABILITY_NAME}"
 @pytest.mark.asyncio
 async def test_incoming_a2a_capability_execution():
     """
-    Tests an incoming A2A capability by:
-    1. Registering a mock capability definition.
-    2. Mocking the A2AHandlerService to return a predefined response for that capability.
-    3. Sending a request to the generic A2A execution endpoint.
-    4. Verifying the response and mock interactions.
+    Performs an end-to-end test of executing a registered A2A capability via the FastAPI endpoint.
+    
+    This test registers a mock capability, injects a mocked handler service, sends a POST request to the A2A execution endpoint with test input, and verifies that the response matches the expected output. It also asserts that the handler was called with the correct arguments and cleans up dependency overrides after execution.
     """
 
     # 1. Prepare and register a mock capability
@@ -67,6 +65,18 @@ async def test_incoming_a2a_capability_execution():
     }
 
     async def mock_handle_a2a_request(capability_name: str, data: BaseModel) -> Dict[str, Any]:
+        """
+        Mocks the asynchronous handling of an A2A capability request for testing purposes.
+        
+        Asserts that the provided capability name and input data match expected test values, then returns a predefined output dictionary simulating the handler's response.
+        
+        Args:
+            capability_name: The name of the capability being invoked.
+            data: The input data model for the capability.
+        
+        Returns:
+            A dictionary representing the simulated output of the capability handler.
+        """
         assert capability_name == TARGET_CAPABILITY_NAME
         assert isinstance(data, TestA2AInput)
         assert data.text_to_process == input_text_for_test
