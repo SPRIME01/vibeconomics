@@ -1,10 +1,7 @@
-import pytest
-import uuid # Added for generating UUID
+import uuid
+from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
-from typing import Any, Dict, List
-
-# Adjust the import path according to your project structure
-from src.app.entrypoints.fastapi_app import app
+from typing import Any
 
 # It's a good practice to initialize the TestClient once, possibly in a fixture,
 # if you have multiple tests in this file. For a single test, this is fine.
