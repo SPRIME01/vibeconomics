@@ -1,5 +1,6 @@
 import { rest } from 'msw';
 import React from 'react';
+import { ComponentMeta, ComponentStory } from '@storybook/react'; // <-- Add this import
 import CopilotActions, { CopilotActionsProps } from './CopilotActions';
 import CopilotSidebar, { CopilotSidebarProps } from './CopilotSidebar';
 
@@ -85,11 +86,8 @@ const CopilotIntegration: React.FC<CopilotIntegrationProps> = ({
   );
 };
 
-// Remove any global variable like:
-// let storyBookContext: any = null;
-
 // Factory function to create MSW handlers with context from Storybook parameters
-const createCopilotHandlers = (context: any) => [
+export const createCopilotHandlers = (context: any) => [
   rest.post('/copilot/execute', async (req, res, ctx) => {
     // Use the context passed from the story parameters
     const copilotContext = context;
