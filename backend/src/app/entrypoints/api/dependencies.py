@@ -96,9 +96,17 @@ def get_template_service(
     return TemplateService(a2a_client_adapter=a2a_client_adapter)
 
 
+from pathlib import Path
+
+# Determine the base path relative to this file, to locate the 'patterns' directory
+# This file is in src/app/entrypoints/api/dependencies.py
+# Patterns directory is in src/app/patterns/
+# So, we need to go up two levels from 'api' to 'app', then into 'patterns'.
+PATTERNS_DIRECTORY = Path(__file__).parent.parent.parent / "patterns"
+
 def get_pattern_service() -> PatternService:
     """Dependency for pattern service."""
-    return PatternService()
+    return PatternService(patterns_dir_path=PATTERNS_DIRECTORY.resolve())
 
 
 def get_strategy_service() -> StrategyService:
