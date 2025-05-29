@@ -61,11 +61,15 @@ async def execute_copilot_action(
     ai_service: AIPatternExecutionService = Depends(get_ai_pattern_execution_service),
 ):
     """
-    Receives a request from a CopilotKit frontend, processes it
-    using the AIPatternExecutionService, and returns the AI's response.
-
-    The `conversationId` can be used to maintain context across multiple turns
-    if the `AIPatternExecutionService` is configured to use it (e.g., via session_id).
+    Processes a CopilotKit frontend request by executing an AI pattern and returning the AI-generated reply.
+    
+    If both `pattern_name` and `pattern_inputs` are provided in the request, executes the specified pattern with the given inputs. Otherwise, defaults to the "conversational_chat" pattern using the provided message as input. Optionally uses `conversationId` to maintain conversational context if supplied and valid.
+    
+    Raises:
+        HTTPException: If `conversationId` is not a valid UUID or if an error occurs during AI pattern execution.
+    
+    Returns:
+        CopilotExecuteResponse: Contains the AI-generated reply as a string.
     """
     try:
         # Attempt to convert conversationId to UUID if it's provided

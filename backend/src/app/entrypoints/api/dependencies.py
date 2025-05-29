@@ -92,7 +92,11 @@ def get_a2a_client_adapter(
 def get_template_service(
     a2a_client_adapter: A2AClientAdapter = Depends(get_a2a_client_adapter),
 ) -> TemplateService:
-    """Dependency for template service with A2A client adapter."""
+    """
+    Provides a TemplateService instance initialized with the given A2A client adapter.
+    
+    This function is intended for use as a FastAPI dependency, supplying a TemplateService that communicates via the provided A2AClientAdapter.
+    """
     return TemplateService(a2a_client_adapter=a2a_client_adapter)
 
 
@@ -105,12 +109,19 @@ from pathlib import Path
 PATTERNS_DIRECTORY = Path(__file__).parent.parent.parent / "patterns"
 
 def get_pattern_service() -> PatternService:
-    """Dependency for pattern service."""
+    """
+    Provides a PatternService instance configured with the resolved patterns directory path.
+    
+    Returns:
+        PatternService: An instance initialized with the absolute path to the patterns directory.
+    """
     return PatternService(patterns_dir_path=PATTERNS_DIRECTORY.resolve())
 
 
 def get_strategy_service() -> StrategyService:
-    """Dependency for strategy service."""
+    """
+    Provides a new instance of the strategy service for dependency injection.
+    """
     return StrategyService()
 
 

@@ -135,20 +135,20 @@ class AIPatternExecutionService:
         output_model: type[BaseModel] | None = None,
     ) -> Any:
         """
-        Executes an AI pattern by assembling prompt components, rendering the prompt, invoking AI completion, and managing conversation state.
-
+        Executes an AI pattern by assembling prompt components, rendering the prompt, invoking AI completion, and updating conversation state.
+        
         Args:
-            pattern_name: The name of the AI pattern to execute.
-            input_variables: Variables to be used for prompt rendering and AI completion.
+            pattern_name: Name of the AI pattern to execute.
+            input_variables: Dictionary of variables for prompt rendering and AI completion.
             session_id: Optional conversation session identifier for maintaining context.
             strategy_name: Optional strategy to influence prompt construction.
             context_name: Optional context to include in the prompt.
             model_name: Optional AI model name for completion.
             output_model: Optional Pydantic model class for structured output parsing.
-
+        
         Returns:
             The AI response as a string, or a parsed Pydantic model instance if `output_model` is provided.
-
+        
         Raises:
             EmptyRenderedPromptError: If the rendered prompt is empty or contains only whitespace.
             ValidationError: If parsing the AI response into the specified output model fails.
