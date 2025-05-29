@@ -8,9 +8,12 @@ const config: StorybookConfig = {
   "addons": [
     "@storybook/addon-onboarding",
     "@chromatic-com/storybook",
-    "@storybook/addon-docs",
+    "@storybook/addon-docs", // Maintained as per current setup
     "@storybook/addon-a11y",
-    "@storybook/addon-vitest"
+    "@storybook/addon-vitest",
+    "@storybook/addon-links", // Added
+    "@storybook/addon-interactions", // Added
+    "msw-storybook-addon" // Added for MSW integration
   ],
   "framework": {
     "name": "@storybook/react-vite",
