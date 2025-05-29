@@ -60,22 +60,27 @@ async def test_nlweb_mcp_interaction_with_a2a_capability():
     app.dependency_overrides[get_a2a_capability_service] = lambda: mock_capability_service
 
     #   b. Mock A2AHandlerService for the actual execution logic of 'test_processor'
-    mock_handler_service = MagicMock(spec=A2AHandlerService)
-    input_text_for_mcp_test = "hello mcp a2a"
-    expected_handler_output = {
-        "processed_text": f"mocked_for_mcp: {input_text_for_mcp_test}",
-        "status_detail": "successfully processed by mock A2A handler via MCP call"
-    }
+-from unittest.mock import AsyncMock, MagicMock
++from unittest.mock import AsyncMock, create_autospec
+ ...
+-mock_handler_service = MagicMock(spec=A2AHandlerService)
++mock_handler_service = create_autospec(A2AHandlerService, instance=True, spec_set=True)
 
-    async def mock_handle_a2a_request_for_mcp(capability_name: str, data: BaseModel) -> Dict[str, Any]:
-        # This mock will be hit when the A2A endpoint for 'test_processor' is called
-        assert capability_name == TEST_CAPABILITY_NAME
-        assert isinstance(data, TestA2AInput)
-        assert data.text_to_process == input_text_for_mcp_test
-        return expected_handler_output
-    
-    mock_handler_service.handle_a2a_request = AsyncMock(side_effect=mock_handle_a2a_request_for_mcp)
-    app.dependency_overrides[get_a2a_handler_service] = lambda: mock_handler_service
+input_text_for_mcp_test = "hello mcp a2a"
+expected_handler_output = {
+    "processed_text": f"mocked_for_mcp: {input_text_for_mcp_test}",
+    "status_detail": "successfully processed by mock A2A handler via MCP call"
+}
+
+async def mock_handle_a2a_request_for_mcp(capability_name: str, data: BaseModel) -> dict[str, Any]:
+    # This mock will be hit when the A2A endpoint for 'test_processor' is called
+    assert capability_name == TEST_CAPABILITY_NAME
+    assert isinstance(data, TestA2AInput)
+    assert data.text_to_process == input_text_for_mcp_test
+    return expected_handler_output
+
+mock_handler_service.handle_a2a_request = AsyncMock(side_effect=mock_handle_a2a_request_for_mcp)
+app.dependency_overrides[get_a2a_handler_service] = lambda: mock_handler_service
 
     # Initialize TestClient *after* overrides are in place
     client = TestClient(app)
