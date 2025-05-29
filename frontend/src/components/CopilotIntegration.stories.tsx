@@ -1,9 +1,8 @@
-import React from 'react';
-import type { Meta, StoryObj, StoryContext } from '@storybook/react';
-import { rest } from 'msw';
+import type { Meta, StoryContext, StoryObj } from '@storybook/react';
+import { ResponseComposition, rest, RestContext, RestRequest } from 'msw';
 
-import CopilotIntegration from './CopilotIntegration';
 import { CopilotProviderDecorator } from '../../.storybook/copilot-decorator'; // Adjust path as needed
+import CopilotIntegration from './CopilotIntegration';
 
 // --- MSW Handlers ---
 const MOCK_API_BASE = '/api';
@@ -11,25 +10,50 @@ const MOCK_API_BASE = '/api';
 const createTaskSuccess = rest.post(`${MOCK_API_BASE}/tasks`, async (req, res, ctx) => {
   const { title, description } = await req.json() as { title: string, description?: string };
   return res(
-    ctx.status(201), 
-    ctx.json({ 
-      id: `tskmsw_integ_${Date.now()}`, 
-      title, 
-      description: description || 'No description provided', 
-      status: 'success' 
+    ctx.status(201),
+    ctx.json({
+      id: `tskmsw_integ_${Date.now()}`,
+      title,
+      description: description || 'No description provided',
+      status: 'success'
     })
   );
 });
 
 const createTaskError = rest.post(`${MOCK_API_BASE}/tasks`, (req, res, ctx) => {
   return res(
-    ctx.status(500), 
-    ctx.json({ 
-      message: "Failed to create task (mocked server error from integration story)", 
-      status: 'error' 
+    ctx.status(500),
+    ctx.json({
+      message: "Failed to create task (mocked server error from integration story)",
+      status: 'error'
     })
   );
 });
+
+// Define explicit types for the request and response payloads
+interface CopilotExecuteRequest {
+  message: string;
+  conversationId?: string | null;
+}
+
+interface CopilotExecuteResponse {
+  reply: string;
+}
+
+// Factory function to create MSW handlers with context/args
+function createCopilotMockHandler(context: { userMessage?: string }) {
+  return rest.post< CopilotExecuteRequest, CopilotExecuteResponse >(
+    '/copilot/execute',
+    (req: RestRequest<CopilotExecuteRequest>, res: ResponseComposition<CopilotExecuteResponse>, ctx: RestContext) => {
+      // Use the context or args passed to the factory
+      const reply = `Echo: ${context.userMessage ?? req.body?.message ?? 'No message'}`;
+      return res(
+        ctx.status(200),
+        ctx.json({ reply })
+      );
+    }
+  );
+}
 
 // Variable to hold story context, captured by a decorator.
 // This allows MSW handlers to be somewhat dynamic based on story args.
@@ -41,11 +65,11 @@ const copilotMockHandler = rest.post('/copilot/mock', async (req, res, ctx) => {
   let reply = `Mock AI response to: "${lastMessage.content.substring(0, 50)}..." (Integration Mock)`;
 
   if (lastMessage.content.toLowerCase().includes("page title")) {
-    const pageTitle = 
-      storyBookContext?.args?.initialPageTitle || 
+    const pageTitle =
+      storyBookContext?.args?.initialPageTitle ||
       // Accessing nested props if defined in args directly, e.g. args: { sidebarProps: { initialPageTitle: '...' }}
       // This part might need adjustment based on actual arg structure for nested props.
-      (storyBookContext?.args?.sidebarProps as any)?.initialPageTitle || 
+      (storyBookContext?.args?.sidebarProps as any)?.initialPageTitle ||
       "Default Integrated Page Title";
     reply = `The current page title is "${pageTitle}". (Simulated from mock context in integration story)`;
   } else if (lastMessage.content.toLowerCase().includes("summarize this text:")) {
@@ -97,21 +121,21 @@ which can then invoke actions defined elsewhere (actions component).
   },
   argTypes: {
     // Example of controlling nested props. Storybook's dot notation for argTypes keys.
-    'sidebarProps.defaultOpen': { 
-      name: 'Sidebar Default Open', 
+    'sidebarProps.defaultOpen': {
+      name: 'Sidebar Default Open',
       control: 'boolean',
       description: 'Controls if the CopilotSidebar is open by default.',
       defaultValue: true,
     },
-    'actionsProps.currentDocumentId': { 
-      name: 'Actions Current Document ID', 
+    'actionsProps.currentDocumentId': {
+      name: 'Actions Current Document ID',
       control: 'text',
       description: 'An example document ID passed to CopilotActions for context.',
       defaultValue: 'doc_integration_default',
     },
-    initialPageTitle: { 
+    initialPageTitle: {
       name: 'Initial Page Title (Context)',
-      control: 'text', 
+      control: 'text',
       description: 'Sets the document.title and can be read by useCopilotReadable in Sidebar if it is configured to do so (e.g., reads document.title or receives it as a prop). The mock handler also uses this for "page title" queries.',
       defaultValue: 'Integrated Copilot Page',
     },
@@ -151,15 +175,15 @@ export const DefaultExperience: Story = {
  * Example command: "Create task title ErrorProneTask description This should show an error"
  */
 export const CreateTaskErrorFlow: Story = {
-  args: { 
+  args: {
     ...DefaultExperience.args, // Reuse args from DefaultExperience
     initialPageTitle: "Task Error Test Page"
   },
   parameters: {
     msw: { handlers: [copilotMockHandler, createTaskError] }, // Override createTask handler
     docs: {
-      description: { 
-        story: 'This story configures the mock API for `createTask` to return an error. Use the sidebar to try creating a task. The action output in the `CopilotActions` component area should display the error.' 
+      description: {
+        story: 'This story configures the mock API for `createTask` to return an error. Use the sidebar to try creating a task. The action output in the `CopilotActions` component area should display the error.'
       },
     },
   },
@@ -170,16 +194,16 @@ export const CreateTaskErrorFlow: Story = {
  * Useful for checking theme compatibility and visual styles.
  */
 export const DarkBackground: Story = {
-  args: { 
+  args: {
     ...DefaultExperience.args,
     initialPageTitle: "Dark Mode Test Page"
   },
   parameters: {
     backgrounds: { default: 'dark' }, // Set dark background for this story
-    docs: { 
-      description: { 
-        story: 'Shows the integrated components on a dark background. Helps in identifying theming issues for UI elements.' 
-      } 
+    docs: {
+      description: {
+        story: 'Shows the integrated components on a dark background. Helps in identifying theming issues for UI elements.'
+      }
     },
   },
 };
@@ -190,7 +214,7 @@ export const DarkBackground: Story = {
  * The mock AI responses are fast to facilitate many interactions quickly.
  */
 export const ManyMessagesSimulation: Story = {
-  args: { 
+  args: {
     ...DefaultExperience.args,
     initialPageTitle: "Long Conversation Test"
   },

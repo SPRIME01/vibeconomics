@@ -1,6 +1,7 @@
+import { rest } from 'msw';
 import React from 'react';
-import CopilotSidebar, { CopilotSidebarProps } from './CopilotSidebar';
 import CopilotActions, { CopilotActionsProps } from './CopilotActions';
+import CopilotSidebar, { CopilotSidebarProps } from './CopilotSidebar';
 
 /**
  * Props for the CopilotIntegration component.
@@ -63,7 +64,7 @@ const CopilotIntegration: React.FC<CopilotIntegrationProps> = ({
           <li>"Notify me with the message 'Integration looks good!' type info."</li>
           <li>"What is the current page title?" (This will test context provided by `useCopilotReadable` in the Sidebar, which should reflect `initialPageTitle` if correctly set up there or if it reads `document.title`).</li>
         </ul>
-        {/* 
+        {/*
           CopilotActions defines the actions available to the Copilot system.
           It doesn't render significant UI itself but makes actions available
           when it's part of the rendered tree within a CopilotKitProvider.
@@ -72,7 +73,7 @@ const CopilotIntegration: React.FC<CopilotIntegrationProps> = ({
         <CopilotActions {...actionsProps} />
       </div>
       <div style={{ width: '350px', borderLeft: '1px solid #ccc', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-        {/* 
+        {/*
           CopilotSidebar provides the chat interface.
           Its `useCopilotReadable` hook should be configured to pick up relevant context,
           potentially influenced by props like `initialPageTitle` or by reading `document.title`.
@@ -84,4 +85,44 @@ const CopilotIntegration: React.FC<CopilotIntegrationProps> = ({
   );
 };
 
-export default CopilotIntegration;
+// Remove any global variable like:
+// let storyBookContext: any = null;
+
+// Factory function to create MSW handlers with context from Storybook parameters
+const createCopilotHandlers = (context: any) => [
+  rest.post('/copilot/execute', async (req, res, ctx) => {
+    // Use the context passed from the story parameters
+    const copilotContext = context;
+    // ...use copilotContext as needed...
+    return res(
+      ctx.status(200),
+      ctx.json({ reply: `Echo: ${copilotContext?.userMessage || 'No message'}` })
+    );
+  }),
+  // ...other handlers...
+];
+
+export default {
+  title: 'Components/CopilotIntegration',
+  component: CopilotIntegration,
+  parameters: {
+    // Pass copilotContext here for each story
+    copilotContext: { userMessage: 'Hello from Storybook!' },
+    msw: {
+      handlers: (req, res, ctx, { parameters }) =>
+        createCopilotHandlers(parameters.copilotContext),
+    },
+  },
+} as ComponentMeta<typeof CopilotIntegration>;
+
+const Template: ComponentStory<typeof CopilotIntegration> = (args, { parameters }) => (
+  <CopilotIntegration {...args} />
+);
+
+export const Default = Template.bind({});
+Default.args = {
+  // ...args...
+};
+Default.parameters = {
+  copilotContext: { userMessage: 'Default story message' },
+};

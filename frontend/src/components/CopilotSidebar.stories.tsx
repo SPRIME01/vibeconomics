@@ -1,10 +1,9 @@
-import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { rest } from 'msw';
 // import { userEvent, within, expect } from '@storybook/test'; // For interaction testing
 
-import CopilotSidebar from './CopilotSidebar';
 import { CopilotProviderDecorator } from '../../.storybook/copilot-decorator';
+import CopilotSidebar from './CopilotSidebar';
 
 // --- MSW Handlers ---
 
@@ -15,20 +14,20 @@ import { CopilotProviderDecorator } from '../../.storybook/copilot-decorator';
 const mockSuccessHandler = rest.post('/copilot/mock', async (req, res, ctx) => {
   try {
     const body = await req.json();
-    
+
     if (!body || !Array.isArray(body.messages)) {
       return res(
         ctx.status(400),
         ctx.json({ error: 'Invalid request format' })
       );
     }
-    
+
     const { messages } = body as { messages: { role: string; content: string }[] };
     const lastMessage = messages[messages.length - 1];
     const responseText = lastMessage?.content
       ? `Mock response to: "${lastMessage.content}" (Sidebar)`
       : "This is a successful mock response from the sidebar mock.";
-    
+
     return res(
       ctx.delay(500),
       ctx.json({ reply: responseText })
@@ -45,9 +44,9 @@ const mockSuccessHandler = rest.post('/copilot/mock', async (req, res, ctx) => {
  * Simulates a server error from the Copilot backend.
  */
 const mockErrorHandler = rest.post('/copilot/mock', (req, res, ctx) => {
-  return res(ctx.delay(500), ctx.status(500), ctx.json({ 
+  return res(ctx.delay(500), ctx.status(500), ctx.json({
     error: "Simulated server error for sidebar.",
-    message: "The AI backend is currently experiencing issues. Please try again later." 
+    message: "The AI backend is currently experiencing issues. Please try again later."
   }));
 });
 
@@ -63,18 +62,32 @@ const mockLoadingHandler = rest.post('/copilot/mock', (req, res, ctx) => {
  * Provides more specific conversational responses.
  */
 const mockConversationHandler = rest.post('/copilot/mock', async (req, res, ctx) => {
-    const body = await req.json() as { messages: { role: string, content: string }[] };
-    const userMessage = body.messages?.find((m: any) => m.role === 'user')?.content?.toLowerCase() || "";
+  try {
+    const body = await req.json();
+    if (!body || !Array.isArray(body.messages)) {
+      return res(
+        ctx.status(400),
+        ctx.json({ error: 'Invalid request format' })
+      );
+    }
+    const { messages } = body as { messages: { role: string; content: string }[] };
+    const userMessage = messages.find((m: any) => m.role === 'user')?.content?.toLowerCase() || "";
     let aiResponse = "How can I help you with that today?";
 
     if (userMessage.includes("hello") || userMessage.includes("hi")) {
-        aiResponse = "Hi there! What can I assist you with?";
+      aiResponse = "Hi there! What can I assist you with?";
     } else if (userMessage.includes("context") || userMessage.includes("page")) {
-        aiResponse = "I see your current page context. For example, the page title might be available to me if exposed via useCopilotReadable. What specifically would you like to know or do with this context?";
+      aiResponse = "I see your current page context. For example, the page title might be available to me if exposed via useCopilotReadable. What specifically would you like to know or do with this context?";
     } else if (userMessage.includes("test")) {
-        aiResponse = "Test acknowledged! I'm responding as expected.";
+      aiResponse = "Test acknowledged! I'm responding as expected.";
     }
     return res(ctx.delay(300), ctx.json({ reply: aiResponse }));
+  } catch (error) {
+    return res(
+      ctx.status(400),
+      ctx.json({ error: 'Invalid JSON in request body' })
+    );
+  }
 });
 
 
@@ -103,8 +116,8 @@ const meta: Meta<typeof CopilotSidebar> = {
     },
   },
   argTypes: {
-    defaultOpen: { 
-      control: 'boolean', 
+    defaultOpen: {
+      control: 'boolean',
       description: 'Whether the sidebar is open by default when the component mounts.',
       defaultValue: true,
     },
@@ -117,7 +130,7 @@ type Story = StoryObj<typeof meta>;
 // --- Story Definitions ---
 
 /**
- * Default view of the Copilot Sidebar. 
+ * Default view of the Copilot Sidebar.
  * It should be open and ready to interact, using the `mockSuccessHandler`.
  */
 export const Default: Story = {
@@ -217,26 +230,26 @@ export const ConversationExample: Story = {
 
     // await step("Wait for sidebar to potentially load/initialize", async () => {
     //   // Add a small delay if needed for the sidebar to become fully interactive
-    //   await new Promise(resolve => setTimeout(resolve, 1000)); 
+    //   await new Promise(resolve => setTimeout(resolve, 1000));
     // });
 
     // await step("Type a message and check for a response", async () => {
     //   try {
     //     const canvas = within(canvasElement);
-          
+
     //     // Finding the input textbox. The accessibility name or placeholder might vary.
     //     // Inspect the rendered CKCopilotSidebar component to get the correct selector.
     //     const input = await canvas.findByRole('textbox', { name: /message/i }); // Placeholder selector
     //     if (!input) throw new Error("Input textbox not found");
 
     //     await userEvent.type(input, "Hello there, Copilot!", { delay: 50 });
-          
+
     //     // Finding the send button. The name or icon might vary.
     //     const sendButton = await canvas.findByRole('button', { name: /send/i }); // Placeholder selector
     //     if (!sendButton) throw new Error("Send button not found");
-          
+
     //     await userEvent.click(sendButton);
-          
+
     //     // Check for the mocked response. Text may vary based on mockConversationHandler.
     //     // This requires the response to be visible in the DOM.
     //     const expectedResponse = "Hi there! What can I assist you with?";
@@ -248,7 +261,7 @@ export const ConversationExample: Story = {
     //     // Optionally re-throw or handle if the test should fail in the Storybook UI
     //   }
     // });
-    
+
     // await step("Type another message checking context", async () => {
     //   // Similar to the above, type "context" and check for the relevant response.
     // });
