@@ -1,5 +1,6 @@
 import asyncio
 from uuid import UUID
+from typing import Any, Dict # Added Dict and Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
@@ -20,9 +21,10 @@ class CopilotExecuteRequest(BaseModel):
     Follows the typical structure expected by CopilotKit.
     """
 
-    message: str
+    message: str  # Main message/query, can be used as default input if pattern_name/inputs not provided
     conversationId: str | None = None  # Can be UUID or any string ID from frontend
-    # Potentially: user_id, context_variables, etc.
+    pattern_name: str | None = None  # Optional: Name of the pattern to execute
+    pattern_inputs: Dict[str, Any] | None = None  # Optional: Specific inputs for the pattern
 
 
 class CopilotExecuteResponse(BaseModel):
@@ -78,11 +80,22 @@ async def execute_copilot_action(
                     detail="Invalid conversationId format. Must be a UUID.",
                 )
 
-        # Using a generic pattern name for now. This should be defined in your pattern service.
-        # The input variables are passed directly from the request.
+        # Determine pattern_name and input_variables
+        # Priority: 1. Explicit pattern_name/pattern_inputs from request
+        #           2. Default to conversational_chat with message as input
+        current_pattern_name: str
+        current_input_variables: Dict[str, Any]
+
+        if request_data.pattern_name and request_data.pattern_inputs is not None:
+            current_pattern_name = request_data.pattern_name
+            current_input_variables = request_data.pattern_inputs
+        else:
+            current_pattern_name = "conversational_chat"
+            current_input_variables = {"input": request_data.message}
+        
         result = await ai_service.execute_pattern(
-            pattern_name="copilot_chat",  # Replace with an actual, defined pattern
-            input_variables={"message": request_data.message},
+            pattern_name=current_pattern_name,
+            input_variables=current_input_variables,
             session_id=session_id_uuid,
             # model_name="gpt-4", # Optionally specify model, or let service use default
             # output_model=None # Define if structured output is expected

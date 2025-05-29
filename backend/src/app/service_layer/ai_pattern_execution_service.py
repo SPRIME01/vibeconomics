@@ -186,7 +186,7 @@ class AIPatternExecutionService:
                 prompt_parts.append(f"=== Context ===\n{context_content}\n")
 
         # Pattern Assembly
-        pattern_content = await self.pattern_service.get_pattern_content(pattern_name)
+        pattern_content = self.pattern_service.get_pattern_content(pattern_name) # Removed await
         if pattern_content:
             prompt_parts.append(f"=== Current Task ===\n{pattern_content}")
 
